@@ -17,9 +17,12 @@
     th,td { padding:5px 3px; border-bottom:1px solid #e2e2e2; font-size:0.97em; text-align:center;}
     th { background:#f2f5fa; color:#2563eb; }
     tr:nth-child(even) { background:#fafbff; }
+    #rowCount { font-weight:bold; margin:10px 0 0 2px; text-align:right;}
+    #refreshBtn { margin-left:10px; background:#e1e8ff; color:#222; border:1px solid #7ca5ea; border-radius:6px; padding:3px 9px; cursor:pointer; }
     @media (max-width:700px) {
       .container { padding:5px;}
       table, thead, tbody, th, td, tr { font-size:0.93em; }
+      #rowCount { text-align:center;}
     }
   </style>
 </head>
@@ -28,9 +31,13 @@
     <!-- 1단: 제목 -->
     <h2>인천공항 출도착 스케줄</h2>
     <!-- 2단: 출발일 및 업데이트 -->
-    <div class="info" id="info-date">출발일: <span id="date"></span> / 갱신시각: <span id="updated_at"></span></div>
+    <div class="info" id="info-date">
+      출발일: <span id="date"></span> /
+      갱신시각: <span id="updated_at"></span>
+      <button id="refreshBtn" title="API에서 최신 정보 새로고침">⟳ 전체조회</button>
+    </div>
     <!-- 3단: 필터 -->
-    <form class="filters" id="filters" onsubmit="event.preventDefault(); renderTable();">
+    <form class="filters" id="filters">
       <label>KAL/OAL
         <select id="kal_oal"><option value="">전체</option><option value="KAL">KAL</option><option value="OAL">OAL</option></select>
       </label>
@@ -69,6 +76,8 @@
       </label>
       <button class="btn" type="submit">검색</button>
     </form>
+    <!-- 행 개수 표시 -->
+    <div id="rowCount"></div>
     <!-- 4단: 본문 표 -->
     <div style="overflow-x:auto;">
       <table id="skd-table">
@@ -86,19 +95,37 @@
     </div>
   </div>
   <script>
-    // === 구글시트 'skd' 데이터 공개공유로 발급된 JSON URL 입력 (Sheet as JSON: e.g. https://opensheet.elk.sh/...)
+    // === 구글시트 'skd' 데이터 공개공유로 발급된 JSON URL 입력
     const SHEET_JSON_URL = "https://script.google.com/macros/s/AKfycbwLdDd2AtP6eEM3BDM1aN9p_Gc0J9oetcM8-VI7BEb6oBe2ufwRiACbV1u5eTWniZjQiw/exec";
     let SKD_DATA = [];
-    // 1. 데이터 로드
-    async function loadData() {
-      let res = await fetch(SHEET_JSON_URL);
-      SKD_DATA = await res.json();
-      renderTable();
-      // 2단: 출발일/업데이트
-      document.getElementById("date").innerText = (SKD_DATA[0]?.date || "");
-      document.getElementById("updated_at").innerText = (SKD_DATA[0]?.updated_at || "");
+    let lastUpdated = "";
+
+    // KST(hh:mm) 변환 함수
+    function formatToKST_HHmm(zulu) {
+      if (!zulu) return "";
+      let d = new Date(zulu);
+      if (isNaN(d)) return zulu;
+      d.setHours(d.getHours() + 9);
+      return d.toISOString().substring(11, 16);
     }
-    // 2. 테이블 렌더링
+
+    // 1. 전체 API fetch
+    async function loadDataAndRender() {
+      document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터를 불러오는 중...</td></tr>`;
+      try {
+        let res = await fetch(SHEET_JSON_URL + "?" + Date.now());
+        SKD_DATA = await res.json();
+        renderTable();
+        document.getElementById("date").innerText = (SKD_DATA[0]?.date || "");
+        // updated_at은 KST(hh:mm:ss)로
+        lastUpdated = new Date().toLocaleString('ko-KR', {hour12:false});
+        document.getElementById("updated_at").innerText = lastUpdated;
+      } catch(e) {
+        document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터 로드 오류</td></tr>`;
+      }
+    }
+
+    // 2. 테이블 필터+렌더링 (fetch 없이 캐시만 사용)
     function renderTable() {
       let tbody = document.getElementById("skd-tbody");
       let f = {};
@@ -108,10 +135,12 @@
       let filtered = SKD_DATA.filter(row => {
         for (let k in f) {
           if (!f[k]) continue;
-          if ((row[k]||"").toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
+          if ((row[k]||"").toString().toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
         }
         return true;
       });
+      // 행 개수 표시
+      document.getElementById("rowCount").innerText = `총 ${filtered.length}건`;
       if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="13">일치하는 데이터가 없습니다.</td></tr>`;
         return;
@@ -123,8 +152,8 @@
           <td>${row.flightId||""}</td>
           <td>${row.sector||""}</td>
           <td>${row.op_type||""}</td>
-          <td>${row.s_time||""}</td>
-          <td>${row.e_time||""}</td>
+          <td>${formatToKST_HHmm(row.s_time)||""}</td>
+          <td>${formatToKST_HHmm(row.e_time)||""}</td>
           <td>${row.status||""}</td>
           <td>${row.terminalId||""}</td>
           <td>${row.chkinRange||""}</td>
@@ -134,7 +163,20 @@
         </tr>
       `).join('');
     }
-    loadData();
+
+    // 전체조회(새로고침) 버튼 → API fetch + render
+    document.getElementById("refreshBtn").onclick = function() {
+      loadDataAndRender();
+    };
+
+    // 검색/필터: fetch 없이 캐시 데이터만 사용
+    document.getElementById("filters").onsubmit = function(e) {
+      e.preventDefault();
+      renderTable();
+    };
+
+    // 최초 1회 전체조회 fetch
+    loadDataAndRender();
   </script>
 </body>
 </html>
