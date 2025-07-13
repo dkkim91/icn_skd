@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>인천공항 수하물 출도착 스케줄(오늘/내일)</title>
+  <style>
+    body { font-family: 'Malgun Gothic', Arial, sans-serif; margin: 0; background: #f9f9f9; }
+    .container { max-width: 1100px; margin: 12px auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 14px #ccc; padding: 16px; }
+    h2 { text-align: center; margin-bottom: 8px; color: #2563eb; letter-spacing:-1px;}
+    .info { text-align: center; font-size: 0.97em; color: #444; margin-bottom: 8px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px 0; justify-content: center;}
+    .filters label { font-size:0.98em; margin-right:4px; }
+    .filters input, .filters select { padding:4px 8px; font-size:1em; border:1px solid #ccc; border-radius: 5px; }
+    .filters .btn { background:#2563eb; color:#fff; border:none; padding:4px 14px; border-radius:6px; cursor:pointer;}
+    table { width:100%; border-collapse:collapse; margin-top: 6px; }
+    th,td { padding:5px 3px; border-bottom:1px solid #e2e2e2; font-size:0.96em; text-align:center;}
+    th { background:#f2f5fa; color:#2563eb; }
+    tr:nth-child(even) { background:#fafbff; }
+    #rowCount { font-weight:bold; margin:10px 0 0 2px; text-align:right;}
+    #refreshBtn { margin-left:10px; background:#e1e8ff; color:#222; border:1px solid #7ca5ea; border-radius:6px; padding:3px 9px; cursor:pointer; }
+    @media (max-width:900px) {
+      .container { padding:5px;}
+      table, thead, tbody, th, td, tr { font-size:0.93em; }
+      #rowCount { text-align:center;}
+      .filters { flex-direction:column; align-items:center;}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 1단: 제목 -->
+    <h2>인천공항 수하물 출도착 스케줄(오늘/내일)</h2>
+    <!-- 2단: updated_at -->
+    <div class="info" id="info-date">
+      데이터 갱신시각: <span id="updated_at"></span>
+      <button id="refreshBtn" title="API에서 최신 정보 새로고침">⟳ 전체조회</button>
+    </div>
+    <!-- 3단: 필터항목 -->
+    <form class="filters" id="filters">
+      <label>출발일
+        <select id="date">
+          <option value="">전체</option>
+          <option value="오늘" selected>오늘</option>
+          <option value="내일">내일</option>
+        </select>
+      </label>
+      <label>KAL/OAL
+        <select id="kal_oal"><option value="">전체</option><option value="KAL">KAL</option><option value="OAL">OAL</option></select>
+      </label>
+      <label>항공사코드
+        <input type="text" id="airlineCode" placeholder="예: KE">
+      </label>
+      <label>편명
+        <input type="text" id="flightId" placeholder="예: KE123">
+      </label>
+      <label>공항코드
+        <input type="text" id="airportcode" placeholder="예: NRT">
+      </label>
+      <label>출도착
+        <select id="op_type"><option value="">전체</option><option value="출발">출발</option><option value="도착">도착</option></select>
+      </label>
+      <label>예정시
+        <input type="text" id="scheduleDatetime" size="2" placeholder="예: 08">
+      </label>
+      <label>상태
+        <select id="status"><option value="">전체</option><option value="정시">정시</option><option value="지연">지연</option><option value="조기">조기</option></select>
+      </label>
+      <label>터미널
+        <input type="text" id="terminalId" size="2">
+      </label>
+      <label>스탠드
+        <input type="text" id="fstandPosition" size="2">
+      </label>
+      <label>활주로
+        <input type="text" id="runway" size="2">
+      </label>
+      <label>게이트
+        <input type="text" id="gateNo" size="2">
+      </label>
+      <label>벨트
+        <input type="text" id="bagCarouselId" size="2">
+      </label>
+      <label>출구
+        <input type="text" id="exitNumber" size="2">
+      </label>
+      <button class="btn" type="submit">검색</button>
+    </form>
+    <!-- 행 개수 표시 -->
+    <div id="rowCount"></div>
+    <!-- 4단: 본문 표 -->
+    <div style="overflow-x:auto;">
+      <table id="bag-table">
+        <thead>
+          <tr>
+            <th>출발일</th>
+            <th>KAL/OAL</th>
+            <th>항공사코드</th>
+            <th>편명</th>
+            <th>공항코드</th>
+            <th>출도착</th>
+            <th>예정시</th>
+            <th>실제시</th>
+            <th>착륙시</th>
+            <th>차이</th>
+            <th>상태</th>
+            <th>터미널</th>
+            <th>스탠드</th>
+            <th>활주로</th>
+            <th>게이트</th>
+            <th>벨트</th>
+            <th>첫수하물</th>
+            <th>마지막수하물</th>
+            <th>출구</th>
+            <th>기종</th>
+            <th>갱신시각</th>
+          </tr>
+        </thead>
+        <tbody id="bag-tbody">
+          <tr><td colspan="21">데이터를 불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    // === API URL ===
+    const BAG_JSON_URL = "https://script.google.com/macros/s/AKfycbzImYZ6K03UKU7DuziljYKDVPFQErQghW75rtCdHjgKJeY93tMVeDRAgcUaORjGNdw5RA/exec";
+    let BAG_DATA = [];
+
+    // KST(hh) 추출 함수
+    function hh(str) {
+      // 202507130540 → 05
+      if (str && str.length >= 10) return str.substring(8,10);
+      return "";
+    }
+    // 날짜 YYYYMMDD → "오늘/내일" 변환
+    function dateKor(dt) {
+      if (!dt) return "";
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const dateObj = new Date(dt.substring(0,4), dt.substring(4,6)-1, dt.substring(6,8));
+      const diff = (dateObj - today) / (1000*3600*24);
+      if (diff === 0) return "오늘";
+      if (diff === 1) return "내일";
+      return dt;
+    }
+
+    // 1. 전체 API fetch
+    async function loadBagDataAndRender() {
+      document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터를 불러오는 중...</td></tr>`;
+      try {
+        let res = await fetch(BAG_JSON_URL + "?" + Date.now());
+        BAG_DATA = await res.json();
+        renderBagTable();
+        // 가장 최신 updated_at 표시
+        let updated = BAG_DATA.length > 0 ? BAG_DATA[0].updated_at : new Date().toLocaleString('ko-KR', {hour12:false});
+        document.getElementById("updated_at").innerText = updated;
+      } catch(e) {
+        document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터 로드 오류</td></tr>`;
+      }
+    }
+
+    // 2. 테이블 필터+렌더링
+    function renderBagTable() {
+      let tbody = document.getElementById("bag-tbody");
+      let f = {};
+      ["date","kal_oal","airlineCode","flightId","airportcode","op_type","scheduleDatetime","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{
+        f[id] = document.getElementById(id).value.trim();
+      });
+      let filtered = BAG_DATA.filter(row => {
+        // 출발일(오늘/내일) 매칭
+        if (f.date && dateKor(row.date) !== f.date) return false;
+        // scheduleDatetime은 hh만 비교
+        if (f.scheduleDatetime && hh(row.scheduleDatetime) !== f.scheduleDatetime.padStart(2,"0")) return false;
+        for (let k of ["kal_oal","airlineCode","flightId","airportcode","op_type","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"]) {
+          if (!f[k]) continue;
+          if ((row[k]||"").toString().toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
+        }
+        return true;
+      });
+      document.getElementById("rowCount") && (document.getElementById("rowCount").innerText = `총 ${filtered.length}건`);
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="21">일치하는 데이터가 없습니다.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(row=>`
+        <tr>
+          <td>${dateKor(row.date)||""}</td>
+          <td>${row.kal_oal||""}</td>
+          <td>${row.airlineCode||""}</td>
+          <td>${row.flightId||""}</td>
+          <td>${row.airportcode||row.airportCode||""}</td>
+          <td>${row.op_type||""}</td>
+          <td>${hh(row.scheduleDatetime)||""}</td>
+          <td>${hh(row.estimatedDatetime)||""}</td>
+          <td>${hh(row.landingDatetime)||""}</td>
+          <td>${row.difftime||""}</td>
+          <td>${row.status||""}</td>
+          <td>${row.terminalId||""}</td>
+          <td>${row.fstandPosition||""}</td>
+          <td>${row.runway||""}</td>
+          <td>${row.gateNo||""}</td>
+          <td>${row.bagCarouselId||""}</td>
+          <td>${row.bagFirstTime||""}</td>
+          <td>${row.bagLastTime||""}</td>
+          <td>${row.exitNumber||row.exit||""}</td>
+          <td>${row.aircraftType||""}</td>
+          <td>${row.updated_at||""}</td>
+        </tr>
+      `).join('');
+    }
+
+    // 전체조회(새로고침)
+    document.getElementById("refreshBtn").onclick = function() {
+      loadBagDataAndRender();
+    };
+
+    // 검색/필터
+    document.getElementById("filters").onsubmit = function(e) {
+      e.preventDefault();
+      renderBagTable();
+    };
+
+    // 최초 1회 전체조회 fetch
+    loadBagDataAndRender();
+  </script>
+</body>
+</html>
