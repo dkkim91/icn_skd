@@ -105,15 +105,15 @@
       if (!zulu) return "";
       let d = new Date(zulu);
       if (!isNaN(d.getTime())) {
-      d.setHours(d.getHours() + 9);
-      return d.toISOString().substring(11, 16);
+        d.setHours(d.getHours() + 9);
+        return d.toISOString().substring(11, 16);
       }
       if (/^\d{12}$/.test(zulu)) {
-       return zulu.substring(8,10) + ":" + zulu.substring(10,12);
+        return zulu.substring(8,10) + ":" + zulu.substring(10,12);
       }
       if (/^\d{1,2}:\d{2}$/.test(zulu)) return zulu;
       return zulu;
-      }
+    }
 
     // 1. 전체 API fetch
     async function loadDataAndRender() {
@@ -139,9 +139,17 @@
         f[id] = document.getElementById(id).value.trim();
       });
       let filtered = SKD_DATA.filter(row => {
+        // s_time의 hh 추출 (KST 기준)
+        let s_time_kst = formatToKST_HHmm(row.s_time);
+        let s_hour = s_time_kst ? s_time_kst.split(":")[0] : "";
         for (let k in f) {
           if (!f[k]) continue;
-          if ((row[k]||"").toString().toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
+          if (k === 'ops_hour') {
+            // 1자리 입력도 "09" 등 2자리로 맞추기 위해 padStart 사용
+            if (s_hour !== f[k].padStart(2,"0")) return false;
+          } else {
+            if ((row[k]||"").toString().toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
+          }
         }
         return true;
       });
