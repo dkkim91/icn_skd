@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>인천공항 출도착 스케줄</title>
+  <style>
+    body { font-family: 'Malgun Gothic', Arial, sans-serif; margin: 0; background: #f9f9f9; }
+    .container { max-width: 900px; margin: 10px auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px #ccc; padding: 16px; }
+    h2 { text-align: center; margin-bottom: 10px; color: #222; }
+    .info { text-align: center; font-size: 0.95em; color: #444; margin-bottom: 8px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px 0; }
+    .filters label { font-size:0.98em; margin-right:4px; }
+    .filters input, .filters select { padding:4px 8px; font-size:1em; border:1px solid #ccc; border-radius: 5px; }
+    .filters .btn { background:#2563eb; color:#fff; border:none; padding:4px 14px; border-radius:6px; cursor:pointer;}
+    table { width:100%; border-collapse:collapse; margin-top: 6px; }
+    th,td { padding:5px 3px; border-bottom:1px solid #e2e2e2; font-size:0.97em; text-align:center;}
+    th { background:#f2f5fa; color:#2563eb; }
+    tr:nth-child(even) { background:#fafbff; }
+    @media (max-width:700px) {
+      .container { padding:5px;}
+      table, thead, tbody, th, td, tr { font-size:0.93em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 1단: 제목 -->
+    <h2>인천공항 출도착 스케줄</h2>
+    <!-- 2단: 출발일 및 업데이트 -->
+    <div class="info" id="info-date">출발일: <span id="date"></span> / 갱신시각: <span id="updated_at"></span></div>
+    <!-- 3단: 필터 -->
+    <form class="filters" id="filters" onsubmit="event.preventDefault(); renderTable();">
+      <label>KAL/OAL
+        <select id="kal_oal"><option value="">전체</option><option value="KAL">KAL</option><option value="OAL">OAL</option></select>
+      </label>
+      <label>항공사
+        <input type="text" id="airline" placeholder="예: 대한항공">
+      </label>
+      <label>편명
+        <input type="text" id="flightId" placeholder="예: KE123">
+      </label>
+      <label>구간
+        <input type="text" id="sector" placeholder="예: ICN/NRT">
+      </label>
+      <label>출도착
+        <select id="op_type"><option value="">전체</option><option value="출발">출발</option><option value="도착">도착</option></select>
+      </label>
+      <label>시간
+        <input type="text" id="ops_hour" placeholder="예: 08">
+      </label>
+      <label>상태
+        <select id="status"><option value="">전체</option><option value="정시">정시</option><option value="지연">지연</option><option value="조기">조기</option></select>
+      </label>
+      <label>터미널
+        <input type="text" id="terminalId" size="2">
+      </label>
+      <label>체크인
+        <input type="text" id="chkinRange" size="5">
+      </label>
+      <label>게이트
+        <input type="text" id="gateNumber" size="2">
+      </label>
+      <label>벨트
+        <input type="text" id="carousel" size="2">
+      </label>
+      <label>출구
+        <input type="text" id="exitNumber" size="2">
+      </label>
+      <button class="btn" type="submit">검색</button>
+    </form>
+    <!-- 4단: 본문 표 -->
+    <div style="overflow-x:auto;">
+      <table id="skd-table">
+        <thead>
+          <tr>
+            <th>KAL/OAL</th><th>항공사</th><th>편명</th><th>구간</th><th>출도착</th>
+            <th>예정시</th><th>실제시</th><th>상태</th><th>터미널</th>
+            <th>체크인</th><th>게이트</th><th>벨트</th><th>출구</th>
+          </tr>
+        </thead>
+        <tbody id="skd-tbody">
+          <tr><td colspan="13">데이터를 불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    // === 구글시트 'skd' 데이터 공개공유로 발급된 JSON URL 입력 (Sheet as JSON: e.g. https://opensheet.elk.sh/...)
+    const SHEET_JSON_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_CJWiYhvFp6gI5M4n7cHx5I13JEIWfJunnFsz7TagXO22AYlXNhSfaHA7QB839o56qY7wf4ae981i/pubhtml?gid=0&single=true";
+    let SKD_DATA = [];
+    // 1. 데이터 로드
+    async function loadData() {
+      let res = await fetch(SHEET_JSON_URL);
+      SKD_DATA = await res.json();
+      renderTable();
+      // 2단: 출발일/업데이트
+      document.getElementById("date").innerText = (SKD_DATA[0]?.date || "");
+      document.getElementById("updated_at").innerText = (SKD_DATA[0]?.updated_at || "");
+    }
+    // 2. 테이블 렌더링
+    function renderTable() {
+      let tbody = document.getElementById("skd-tbody");
+      let f = {};
+      ["kal_oal","airline","flightId","sector","op_type","ops_hour","status","terminalId","chkinRange","gateNumber","carousel","exitNumber"].forEach(id=>{
+        f[id] = document.getElementById(id).value.trim();
+      });
+      let filtered = SKD_DATA.filter(row => {
+        for (let k in f) {
+          if (!f[k]) continue;
+          if ((row[k]||"").toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
+        }
+        return true;
+      });
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="13">일치하는 데이터가 없습니다.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(row=>`
+        <tr>
+          <td>${row.kal_oal||""}</td>
+          <td>${row.airline||""}</td>
+          <td>${row.flightId||""}</td>
+          <td>${row.sector||""}</td>
+          <td>${row.op_type||""}</td>
+          <td>${row.s_time||""}</td>
+          <td>${row.e_time||""}</td>
+          <td>${row.status||""}</td>
+          <td>${row.terminalId||""}</td>
+          <td>${row.chkinRange||""}</td>
+          <td>${row.gateNumber||""}</td>
+          <td>${row.carousel||""}</td>
+          <td>${row.exitNumber||""}</td>
+        </tr>
+      `).join('');
+    }
+    loadData();
+  </script>
+</body>
+</html>
