@@ -104,10 +104,16 @@
     function formatToKST_HHmm(zulu) {
       if (!zulu) return "";
       let d = new Date(zulu);
-      if (isNaN(d)) return zulu;
+      if (!isNaN(d.getTime())) {
       d.setHours(d.getHours() + 9);
       return d.toISOString().substring(11, 16);
-    }
+      }
+      if (/^\d{12}$/.test(zulu)) {
+       return zulu.substring(8,10) + ":" + zulu.substring(10,12);
+      }
+      if (/^\d{1,2}:\d{2}$/.test(zulu)) return zulu;
+      return zulu;
+      }
 
     // 1. 전체 API fetch
     async function loadDataAndRender() {
