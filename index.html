@@ -9,21 +9,97 @@
     .container { max-width: 1100px; margin: 18px auto; background: #fff; border-radius: 18px; box-shadow: 0 2px 16px #bbb; padding: 18px; }
     h2 { text-align: center; margin-bottom: 14px; color: #2563eb; letter-spacing:-1px;}
     .info { text-align: center; font-size: 1.02em; color: #333; margin-bottom: 10px; }
-    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px 0; justify-content: center;}
-    .filters label { font-size:1.02em; margin-right:5px; }
-    .filters input, .filters select { padding:4px 10px; font-size:1em; border:1px solid #ccc; border-radius: 5px; }
-    .filters .btn { background:#2563eb; color:#fff; border:none; padding:4px 14px; border-radius:6px; cursor:pointer;}
+    /* 필터 섹션 스타일 */
+    .filters { 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 8px; 
+      margin: 8px 0 16px 0; 
+      justify-content: center;
+      padding: 0 5px; /* 모바일에서 좌우 여백 추가 */
+    }
+    .filters label { 
+      font-size:1.02em; 
+      margin-right:5px; 
+      display: flex; /* 라벨과 입력 필드를 한 줄에 정렬 */
+      align-items: center; /* 세로 중앙 정렬 */
+      white-space: nowrap; /* 라벨이 줄바꿈되지 않도록 */
+    }
+    .filters input, .filters select { 
+      padding:4px 10px; 
+      font-size:1em; 
+      border:1px solid #ccc; 
+      border-radius: 5px; 
+      flex-grow: 1; /* 입력 필드가 가능한 공간을 채우도록 */
+      min-width: 80px; /* 최소 너비 설정 */
+    }
+    .filters .btn { 
+      background:#2563eb; 
+      color:#fff; 
+      border:none; 
+      padding:4px 14px; 
+      border-radius:6px; 
+      cursor:pointer;
+      flex-shrink: 0; /* 버튼이 줄어들지 않도록 */
+    }
     table { width:100%; border-collapse:collapse; margin-top: 6px; }
     th,td { padding:6px 3px; border-bottom:1px solid #e2e2e2; font-size:0.99em; text-align:center;}
     th { background:#f2f5fa; color:#2563eb; }
     tr:nth-child(even) { background:#f9fbff; }
     #rowCount { font-weight:bold; margin:10px 0 0 2px; text-align:right;}
     #refreshBtn { margin-left:10px; background:#e1e8ff; color:#222; border:1px solid #7ca5ea; border-radius:6px; padding:3px 9px; cursor:pointer; }
+    
+    /* 모바일 최적화 */
     @media (max-width:900px) {
       .container { padding:8px;}
-      table, thead, tbody, th, td, tr { font-size:0.95em; }
-      #rowCount { text-align:center;}
-      .filters { flex-direction:column; align-items:center;}
+      table, thead, tbody, th, td, tr { font-size:0.9em; } /* 모바일에서 폰트 크기 약간 줄임 */
+      #rowCount { text-align:center; margin-top: 5px; } /* 모바일에서 중앙 정렬 및 여백 조정 */
+      .filters { 
+        flex-direction: column; /* 필터 항목을 세로로 쌓음 */
+        align-items: stretch; /* 항목들이 컨테이너 너비를 채우도록 */
+        gap: 10px; /* 세로 간격 늘림 */
+        padding: 0 10px; /* 모바일에서 좌우 여백 조정 */
+      }
+      .filters label {
+        flex-direction: row; /* 라벨과 입력 필드는 여전히 한 줄에 */
+        justify-content: space-between; /* 라벨과 입력 필드를 양 끝으로 정렬 */
+        align-items: center;
+        width: 100%; /* 라벨이 전체 너비를 사용하도록 */
+      }
+      .filters input, .filters select {
+        width: auto; /* flex-grow가 있으므로 auto로 설정 */
+        max-width: 60%; /* 입력 필드의 최대 너비 제한 (라벨과의 균형) */
+      }
+      .filters .btn {
+        width: 100%; /* 버튼이 전체 너비를 사용하도록 */
+        padding: 8px 14px; /* 버튼 패딩 늘림 */
+        margin-top: 5px; /* 버튼 상단 여백 추가 */
+      }
+      /* 테이블 스크롤바가 항상 보이도록 설정 */
+      div[style="overflow-x:auto;"] {
+        -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 */
+      }
+      /* 테이블 셀의 패딩을 줄여 더 많은 내용을 표시 */
+      th, td {
+        padding: 4px 2px; 
+      }
+    }
+
+    /* 더 작은 모바일 기기 (예: 480px 이하) */
+    @media (max-width:480px) {
+        .filters label {
+            flex-direction: column; /* 더 작은 화면에서는 라벨과 입력 필드를 세로로 쌓음 */
+            align-items: flex-start; /* 왼쪽 정렬 */
+            gap: 2px; /* 간격 줄임 */
+        }
+        .filters input, .filters select {
+            width: 100%; /* 입력 필드가 전체 너비를 사용하도록 */
+            max-width: none; /* 최대 너비 제한 해제 */
+        }
+        th, td {
+            font-size: 0.85em; /* 폰트 크기 더 줄임 */
+            padding: 3px 1px; /* 패딩 더 줄임 */
+        }
     }
   </style>
 </head>
