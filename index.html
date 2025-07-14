@@ -25,7 +25,6 @@
       갱신시각: <span id="updated_at"></span>
       <button id="refreshBtn" title="API에서 최신 정보 새로고침">⟳ 전체조회</button>
     </div>
-    <!-- 필터 검색 폼 (id="filters" 필수!) -->
     <form class="filters" id="filters" style="margin-bottom:12px;">
       <input type="text" id="airline" placeholder="항공사" />
       <input type="text" id="flightId" placeholder="편명" />
@@ -46,11 +45,13 @@
     </div>
   </div>
   <script>
+    // 반드시 본인의 웹앱 주소로 수정!
     const SHEET_JSON_URL = "https://script.google.com/macros/s/AKfycbwLdDd2AtP6eEM3BDM1aN9p_Gc0J9oetcM8-VI7BEb6oBe2ufwRiACbV1u5eTWniZjQiw/exec";
     let SKD_DATA = [];
 
     function toKSTString(dtstr) {
       if (!dtstr) return "";
+      // ISO 8601 포맷(UTC, Z) → KST로 변환
       if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(dtstr)) {
         const m = dtstr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
         if (m) {
@@ -66,6 +67,7 @@
         }
         return dtstr;
       }
+      // yyyy-MM-dd HH:mm:ss는 변환 없이 그대로
       if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
         return dtstr;
       }
