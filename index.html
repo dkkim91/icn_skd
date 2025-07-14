@@ -118,21 +118,28 @@
     // updated_at → 항상 한국시간 yyyy-MM-dd HH:mm:ss로 변환
 function toKSTString(dtstr) {
   if (!dtstr) return "";
+  // ISO 8601 포맷(UTC)일 때만 변환
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(dtstr)) {
+    // UTC → KST 변환 (직접 +9h)
     const date = new Date(dtstr);
     if (!isNaN(date.getTime())) {
-      const yyyy = date.getFullYear();
-      const MM = String(date.getMonth() + 1).padStart(2, '0');
-      const dd = String(date.getDate()).padStart(2, '0');
-      const HH = String((date.getHours() + 9) % 24).padStart(2, '0');
-      const mm = String(date.getMinutes()).padStart(2, '0');
-      const ss = String(date.getSeconds()).padStart(2, '0');
+      // +9h 직접 보정
+      const utc = date.getTime() + (9 * 60 * 60 * 1000);
+      const kst = new Date(utc);
+      const yyyy = kst.getFullYear();
+      const MM = String(kst.getMonth() + 1).padStart(2, '0');
+      const dd = String(kst.getDate()).padStart(2, '0');
+      const HH = String(kst.getHours()).padStart(2, '0');
+      const mm = String(kst.getMinutes()).padStart(2, '0');
+      const ss = String(kst.getSeconds()).padStart(2, '0');
       return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
     }
   }
+  // yyyy-MM-dd HH:mm:ss 형태면 **절대 변환하지 말고 그대로 반환**
   if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
     return dtstr;
   }
+  // 기타 포맷은 원문 그대로
   return dtstr;
 }
 
