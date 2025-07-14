@@ -106,8 +106,8 @@
     // === updated_at 안전 변환: UTC(ISO)만 변환, KST 포맷은 그대로
 function toKSTString(dtstr) {
   if (!dtstr) return "";
-  // UTC ISO 포맷(2025-07-14T03:49:58.000Z)은 변환
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(dtstr)) {
+    // ISO포맷만 파싱 변환
     const m = dtstr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
     if (m) {
       const utc = Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
@@ -122,21 +122,9 @@ function toKSTString(dtstr) {
     }
     return dtstr;
   }
-  // 이미 KST인데 +9h 중복 적용된 경우 → 강제로 -9h
+  // yyyy-MM-dd HH:mm:ss는 **절대 변환X, 그대로 반환!**
   if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
-    const [datePart, timePart] = dtstr.split(' ');
-    const [yyyy, MM, dd] = datePart.split('-').map(Number);
-    const [HH, mm, ss] = timePart.split(':').map(Number);
-    // Date 객체(KST 해석) - 9h
-    const t = new Date(yyyy, MM-1, dd, HH, mm, ss).getTime() - 9*60*60*1000;
-    const corr = new Date(t);
-    const cy = corr.getFullYear();
-    const cM = String(corr.getMonth()+1).padStart(2, '0');
-    const cd = String(corr.getDate()).padStart(2, '0');
-    const cH = String(corr.getHours()).padStart(2, '0');
-    const cm = String(corr.getMinutes()).padStart(2, '0');
-    const cs = String(corr.getSeconds()).padStart(2, '0');
-    return `${cy}-${cM}-${cd} ${cH}:${cm}:${cs}`;
+    return dtstr;
   }
   return dtstr;
 }
