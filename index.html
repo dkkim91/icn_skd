@@ -104,31 +104,42 @@
     }
 
     // === updated_at 안전 변환: UTC(ISO)만 변환, KST 포맷은 그대로
-    function toKSTString(dtstr) {
-      if (!dtstr) return "";
-      // ISO 8601 포맷(UTC)만 변환: 2025-07-14T03:49:58.000Z 등
-      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(dtstr)) {
-        const m = dtstr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-        if (m) {
-          const utc = Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
-          const kst = new Date(utc + 9*60*60*1000);
-          const yyyy = kst.getFullYear();
-          const MM = String(kst.getMonth()+1).padStart(2, '0');
-          const dd = String(kst.getDate()).padStart(2, '0');
-          const HH = String(kst.getHours()).padStart(2, '0');
-          const mm = String(kst.getMinutes()).padStart(2, '0');
-          const ss = String(kst.getSeconds()).padStart(2, '0');
-          return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
-        }
-        return dtstr;
-      }
-      // yyyy-MM-dd HH:mm:ss(이미 KST)는 절대 변환하지 않고 그대로!
-      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
-        return dtstr;
-      }
-      // 기타는 그대로
-      return dtstr;
+function toKSTString(dtstr) {
+  if (!dtstr) return "";
+  // UTC ISO 포맷(2025-07-14T03:49:58.000Z)은 변환
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(dtstr)) {
+    const m = dtstr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+    if (m) {
+      const utc = Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+      const kst = new Date(utc + 9*60*60*1000);
+      const yyyy = kst.getFullYear();
+      const MM = String(kst.getMonth()+1).padStart(2, '0');
+      const dd = String(kst.getDate()).padStart(2, '0');
+      const HH = String(kst.getHours()).padStart(2, '0');
+      const mm = String(kst.getMinutes()).padStart(2, '0');
+      const ss = String(kst.getSeconds()).padStart(2, '0');
+      return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
     }
+    return dtstr;
+  }
+  // 이미 KST인데 +9h 중복 적용된 경우 → 강제로 -9h
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
+    const [datePart, timePart] = dtstr.split(' ');
+    const [yyyy, MM, dd] = datePart.split('-').map(Number);
+    const [HH, mm, ss] = timePart.split(':').map(Number);
+    // Date 객체(KST 해석) - 9h
+    const t = new Date(yyyy, MM-1, dd, HH, mm, ss).getTime() - 9*60*60*1000;
+    const corr = new Date(t);
+    const cy = corr.getFullYear();
+    const cM = String(corr.getMonth()+1).padStart(2, '0');
+    const cd = String(corr.getDate()).padStart(2, '0');
+    const cH = String(corr.getHours()).padStart(2, '0');
+    const cm = String(corr.getMinutes()).padStart(2, '0');
+    const cs = String(corr.getSeconds()).padStart(2, '0');
+    return `${cy}-${cM}-${cd} ${cH}:${cm}:${cs}`;
+  }
+  return dtstr;
+}
 
     async function loadDataAndRender() {
       document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터를 불러오는 중...</td></tr>`;
