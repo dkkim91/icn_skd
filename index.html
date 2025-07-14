@@ -47,7 +47,7 @@
         </select>
       </label>
       <label>항공사
-        <input type="text" id="airline" placeholder="예: 대한항공" />
+        <input type="text" id="airlineCodeFilter" placeholder="예: KE" size="4" />
       </label>
       <label>편명
         <input type="text" id="flightId" placeholder="예: KE123" />
@@ -71,7 +71,18 @@
         </select>
       </label>
       <label>터미널
-        <input type="text" id="terminalId" size="2" />
+        <select id="terminalId">
+          <option value="">전체</option>
+        </select>
+      </label>
+      <label>게이트
+        <input type="text" id="gateNumberFilter" size="2" />
+      </label>
+      <label>Carousel
+        <input type="text" id="carouselFilter" size="2" />
+      </label>
+      <label>Exit
+        <input type="text" id="exitNumberFilter" size="2" />
       </label>
       <button class="btn" type="submit">검색</button>
     </form>
@@ -82,17 +93,21 @@
           <tr>
             <th>출발일</th>
             <th>KAL/OAL</th>
-            <th>항공사</th>
             <th>편명</th>
             <th>구간</th>
             <th>출도착</th>
+            <th>예정시간</th>
+            <th>실제시간</th>
             <th>상태</th>
             <th>터미널</th>
             <th>게이트</th>
+            <th>기종</th>
+            <th>Carousel</th>
+            <th>Exit</th>
           </tr>
         </thead>
         <tbody id="skd-tbody">
-          <tr><td colspan="9">데이터를 불러오는 중...</td></tr>
+          <tr><td colspan="13">데이터를 불러오는 중...</td></tr>
         </tbody>
       </table>
     </div>
@@ -101,32 +116,62 @@
     const SHEET_JSON_URL = "https://script.google.com/macros/s/AKfycbwLdDd2AtP6eEM3BDM1aN9p_Gc0J9oetcM8-VI7BEb6oBe2ufwRiACbV1u5eTWniZjQiw/exec";
     let SKD_DATA = [];
 
+    // --- 시간 변환 함수 (UTC ISO 문자열을 브라우저의 로컬 시간대(KST)로 변환) ---
     function toKSTString(dtstr) {
-      if (!dtstr) return "";
-      // UTC(ISO 포맷) → KST
-      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(dtstr)) {
-        const m = dtstr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-        if (m) {
-          const utc = Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
-          const kst = new Date(utc + 9*60*60*1000);
-          const yyyy = kst.getFullYear();
-          const MM = String(kst.getMonth()+1).padStart(2, '0');
-          const dd = String(kst.getDate()).padStart(2, '0');
-          const HH = String(kst.getHours()).padStart(2, '0');
-          const mm = String(kst.getMinutes()).padStart(2, '0');
-          const ss = String(kst.getSeconds()).padStart(2, '0');
+      if (!dtstr) {
+        return "";
+      }
+
+      try {
+        // ISO 8601 문자열 (예: "...Z")은 Date 객체에서 UTC로 파싱 후 브라우저의 로컬 시간으로 자동 변환됩니다.
+        const dateObj = new Date(dtstr); 
+        
+        // Date 객체가 유효하고, 원본 문자열이 ISO UTC 형식인지 확인 (Z로 끝나는지)
+        if (!isNaN(dateObj.getTime()) && dtstr.endsWith('Z')) {
+          // Date 객체의 로컬 시간 구성 요소를 사용하여 KST 문자열 생성
+          const yyyy = dateObj.getFullYear();
+          const MM = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const dd = String(dateObj.getDate()).padStart(2, '0');
+          const HH = String(dateObj.getHours()).padStart(2, '0');
+          const mm = String(dateObj.getMinutes()).padStart(2, '0');
+          const ss = String(dateObj.getSeconds()).padStart(2, '0');
+          
           return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
         }
+      } catch (e) {
+        console.error("Date parsing error:", e); // 날짜 파싱 중 오류 발생 시 콘솔에 기록
+      }
+
+      // ISO UTC 형식이 아니거나 파싱에 실패한 경우, 이미 'YYYY-MM-DD HH:mm:ss' 형식인지 확인
+      const kstFormatRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+      if (kstFormatRegex.test(dtstr)) {
         return dtstr;
       }
-      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
-        return dtstr;
-      }
-      return dtstr;
+
+      return dtstr; // 그 외의 경우 원본 문자열 반환
     }
 
+    // --- 시간 변환 함수 (UTC ISO 문자열을 HH:mm 형식으로 변환) ---
+    function toHHMMString(dtstr) {
+      if (!dtstr) {
+        return "";
+      }
+      try {
+        const dateObj = new Date(dtstr);
+        if (!isNaN(dateObj.getTime())) {
+          const HH = String(dateObj.getHours()).padStart(2, '0');
+          const mm = String(dateObj.getMinutes()).padStart(2, '0');
+          return `${HH}:${mm}`;
+        }
+      } catch (e) {
+        console.error("Time parsing error for HH:mm:", e);
+      }
+      return ""; // 파싱 실패 시 빈 문자열 반환
+    }
+    // --- 시간 변환 함수 끝 ---
+
     async function loadDataAndRender() {
-      document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="9">데이터를 불러오는 중...</td></tr>`;
+      document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터를 불러오는 중...</td></tr>`;
       try {
         let res = await fetch(SHEET_JSON_URL + "?" + Date.now());
         SKD_DATA = await res.json();
@@ -141,10 +186,18 @@
           (dates.includes(tomorrowStr) ? `<option value="${tomorrowStr}">${tomorrowStr}</option>` : "");
         dateSelect.value = "";
 
+        // 터미널 옵션 동적생성
+        let terminalSelect = document.getElementById("terminalId");
+        let terminals = [...new Set(SKD_DATA.map(row => row.terminalId).filter(t => t))].sort();
+        terminalSelect.innerHTML = `<option value="">전체</option>` + 
+                                   terminals.map(t => `<option value="${t}">${t}</option>`).join('');
+        terminalSelect.value = "";
+
+
         renderTable();
         document.getElementById("date").innerText = (dates[0] || "");
 
-        // 최신 updated_at 구하고 콘솔 출력
+        // 최신 updated_at 구하기
         let latestUpdatedAt = "";
         if (SKD_DATA.length > 0) {
           let sorted = SKD_DATA
@@ -152,48 +205,61 @@
             .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
           latestUpdatedAt = sorted.length > 0 ? sorted[0].updated_at : "";
         }
-        console.log("latestUpdatedAt 원본:", latestUpdatedAt);
-
+        
+        // KST로 변환하여 표시
         document.getElementById("updated_at").innerText = toKSTString(latestUpdatedAt) || "-";
+
       } catch(e) {
-        document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="9">데이터 로드 오류</td></tr>`;
+        document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터 로드 오류</td></tr>`;
         document.getElementById("updated_at").innerText = "- (오류)";
+        console.error("데이터 로드 중 오류 발생:", e);
       }
     }
 
     function renderTable() {
       let tbody = document.getElementById("skd-tbody");
       let f = {};
-      ["dateSelect","kal_oal","airline","flightId","sector","op_type","status","terminalId"].forEach(id=>{
+      // 필터 항목 업데이트: airlineCodeFilter 추가
+      ["dateSelect","kal_oal","airlineCodeFilter","flightId","sector","op_type","status","terminalId", "gateNumberFilter", "carouselFilter", "exitNumberFilter"].forEach(id=>{
         f[id] = document.getElementById(id).value.trim();
       });
+
       let filtered = SKD_DATA.filter(row => {
         if (f.dateSelect && row.date != f.dateSelect) return false;
         if (f.kal_oal && row.kal_oal != f.kal_oal) return false;
-        if (f.airline && (!row.airline || row.airline.indexOf(f.airline) === -1)) return false;
+        // 항공사 코드 필터링 (편명 앞 2글자)
+        if (f.airlineCodeFilter && (!row.flightId || !row.flightId.startsWith(f.airlineCodeFilter.toUpperCase()))) return false;
         if (f.flightId && (!row.flightId || row.flightId.indexOf(f.flightId) === -1)) return false;
         if (f.sector && (!row.sector || row.sector.indexOf(f.sector) === -1)) return false;
         if (f.op_type && row.op_type != f.op_type) return false;
         if (f.status && row.status != f.status) return false;
-        if (f.terminalId && (!row.terminalId || row.terminalId.indexOf(f.terminalId) === -1)) return false;
+        if (f.terminalId && row.terminalId != f.terminalId) return false; // 터미널은 정확히 일치해야 함
+        if (f.gateNumberFilter && (!row.gateNumber || String(row.gateNumber).indexOf(f.gateNumberFilter) === -1)) return false;
+        if (f.carouselFilter && (!row.carousel || String(row.carousel).indexOf(f.carouselFilter) === -1)) return false;
+        if (f.exitNumberFilter && (!row.exitNumber || String(row.exitNumber).indexOf(f.exitNumberFilter) === -1)) return false;
         return true;
       });
       document.getElementById("rowCount").innerText = `총 ${filtered.length}건`;
+      // colspan을 13으로 업데이트 (기존 9 - 항공사 1 + 예정시간, 실제시간, 기종, Carousel, Exit 5 = 13)
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9">일치하는 데이터가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13">일치하는 데이터가 없습니다.</td></tr>`;
         return;
       }
       tbody.innerHTML = filtered.map(row=>`
         <tr>
           <td>${row.date||""}</td>
           <td>${row.kal_oal||""}</td>
-          <td>${row.airline||""}</td>
           <td>${row.flightId||""}</td>
           <td>${row.sector||""}</td>
           <td>${row.op_type||""}</td>
+          <td>${toHHMMString(row.s_time)||""}</td> <!-- 예정시간 HH:mm 형식으로 표시 -->
+          <td>${toHHMMString(row.e_time)||""}</td> <!-- 실제시간 HH:mm 형식으로 표시 -->
           <td>${row.status||""}</td>
           <td>${row.terminalId||""}</td>
           <td>${row.gateNumber||""}</td>
+          <td>${row.aircraftSubtype||""}</td> <!-- 기종 추가 -->
+          <td>${row.carousel||""}</td> <!-- Carousel 추가 -->
+          <td>${row.exitNumber||""}</td> <!-- Exit 추가 -->
         </tr>
       `).join('');
     }
