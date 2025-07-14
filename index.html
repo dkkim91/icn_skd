@@ -55,23 +55,30 @@
       table, thead, tbody, th, td, tr { font-size:0.9em; } /* 모바일에서 폰트 크기 약간 줄임 */
       #rowCount { text-align:center; margin-top: 5px; } /* 모바일에서 중앙 정렬 및 여백 조정 */
       .filters { 
-        flex-direction: column; /* 필터 항목을 세로로 쌓음 */
-        align-items: stretch; /* 항목들이 컨테이너 너비를 채우도록 */
-        gap: 10px; /* 세로 간격 늘림 */
-        padding: 0 10px; /* 모바일에서 좌우 여백 조정 */
+        flex-direction: row; /* 필터 항목을 가로로 배치 */
+        justify-content: space-between; /* 항목들을 양 끝으로 정렬 */
+        align-items: flex-start; /* 상단 정렬 */
+        gap: 5px; /* 가로 간격 줄임 */
+        padding: 0 5px; /* 모바일에서 좌우 여백 조정 */
       }
       .filters label {
-        flex-direction: row; /* 라벨과 입력 필드는 여전히 한 줄에 */
-        justify-content: space-between; /* 라벨과 입력 필드를 양 끝으로 정렬 */
-        align-items: center;
-        width: 100%; /* 라벨이 전체 너비를 사용하도록 */
+        flex-direction: column; /* 라벨과 입력 필드를 세로로 쌓음 */
+        align-items: flex-start; /* 왼쪽 정렬 */
+        width: calc(50% - 5px); /* 한 줄에 2개씩 표시 */
+        margin-right: 0; /* 기본 마진 제거 */
+        gap: 2px; /* 라벨과 입력 필드 사이 간격 줄임 */
       }
       .filters input, .filters select {
-        width: auto; /* flex-grow가 있으므로 auto로 설정 */
-        max-width: 60%; /* 입력 필드의 최대 너비 제한 (라벨과의 균형) */
+        width: 100%; /* 입력 필드가 라벨 너비를 채우도록 */
+        max-width: none; /* 최대 너비 제한 해제 */
+        box-sizing: border-box; /* 패딩과 보더가 너비에 포함되도록 */
+      }
+      .filters #flightId, .filters #sector { /* 편명과 구간 입력 박스 크기 줄임 */
+        width: 100%;
+        max-width: 100px; /* 고정 너비로 더 작게 */
       }
       .filters .btn {
-        width: 100%; /* 버튼이 전체 너비를 사용하도록 */
+        width: calc(100% - 10px); /* 버튼이 전체 너비를 사용하도록 */
         padding: 8px 14px; /* 버튼 패딩 늘림 */
         margin-top: 5px; /* 버튼 상단 여백 추가 */
       }
@@ -81,24 +88,30 @@
       }
       /* 테이블 셀의 패딩을 줄여 더 많은 내용을 표시 */
       th, td {
-        padding: 4px 2px; 
+        padding: 4px 1px; /* 패딩 더 줄임 */
+        font-size: 0.85em; /* 폰트 크기 더 줄임 */
+      }
+      /* 특정 헤더 및 셀의 텍스트 줄바꿈 허용 */
+      th.two-line, td.two-line {
+        white-space: normal; /* 줄바꿈 허용 */
+        line-height: 1.2; /* 줄 간격 조정 */
+      }
+      th.two-line {
+        padding: 4px 1px; /* 헤더 패딩 조정 */
       }
     }
 
     /* 더 작은 모바일 기기 (예: 480px 이하) */
     @media (max-width:480px) {
         .filters label {
-            flex-direction: column; /* 더 작은 화면에서는 라벨과 입력 필드를 세로로 쌓음 */
-            align-items: flex-start; /* 왼쪽 정렬 */
-            gap: 2px; /* 간격 줄임 */
+            width: calc(50% - 5px); /* 여전히 한 줄에 2개 */
         }
-        .filters input, .filters select {
-            width: 100%; /* 입력 필드가 전체 너비를 사용하도록 */
-            max-width: none; /* 최대 너비 제한 해제 */
+        .filters #flightId, .filters #sector {
+            max-width: 80px; /* 더 작은 화면에서 편명/구간 입력 박스 더 줄임 */
         }
         th, td {
-            font-size: 0.85em; /* 폰트 크기 더 줄임 */
-            padding: 3px 1px; /* 패딩 더 줄임 */
+            font-size: 0.8em; /* 폰트 크기 더 줄임 */
+            padding: 2px 0px; /* 패딩 더 줄임 */
         }
     }
   </style>
@@ -168,8 +181,8 @@
         <thead>
           <tr>
             <th>출발일</th>
-            <th>KAL/OAL</th>
-            <th>편명</th>
+            <th class="two-line">KAL/<br>OAL</th>
+            <th class="two-line">편명</th>
             <th>구간</th>
             <th>출도착</th>
             <th>예정시간</th>
@@ -323,9 +336,9 @@
       }
       tbody.innerHTML = filtered.map(row=>`
         <tr>
-          <td>${row.date||""}</td>
-          <td>${row.kal_oal||""}</td>
-          <td>${row.flightId||""}</td>
+          <td>${String(row.date).slice(4,6)}/${String(row.date).slice(6,8)}</td> <!-- 출발일 MMDD 형식으로 표시 -->
+          <td class="two-line">${row.kal_oal||""}</td> <!-- KAL/OAL 두 줄로 표시 -->
+          <td class="two-line">${row.flightId ? row.flightId.slice(0,2) + '<br>' + row.flightId.slice(2) : ""}</td> <!-- 편명 두 줄로 표시 -->
           <td>${row.sector||""}</td>
           <td>${row.op_type||""}</td>
           <td>${toHHMMString(row.s_time)||""}</td> <!-- 예정시간 HH:mm 형식으로 표시 -->
