@@ -116,28 +116,26 @@
     }
 
     // updated_at → 항상 한국시간 yyyy-MM-dd HH:mm:ss로 변환
-    function toKSTString(dtstr) {
-      if (!dtstr) return "";
-      // ISO 포맷(2025-07-14T03:37:23.000Z)만 변환
-      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(dtstr)) {
-        // UTC → KST 변환
-        const date = new Date(dtstr);
-        if (!isNaN(date.getTime())) {
-          const yyyy = date.getFullYear();
-          const MM = String(date.getMonth() + 1).padStart(2, '0');
-          const dd = String(date.getDate()).padStart(2, '0');
-          const HH = String((date.getHours() + 9) % 24).padStart(2, '0');
-          const mm = String(date.getMinutes()).padStart(2, '0');
-          const ss = String(date.getSeconds()).padStart(2, '0');
-          return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
-        }
-      }
-      // yyyy-MM-dd HH:mm:ss 이미 변환되어 있으면 그대로
-      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
-        return dtstr;
-      }
-      return dtstr;
+function toKSTString(dtstr) {
+  if (!dtstr) return "";
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(dtstr)) {
+    const date = new Date(dtstr);
+    if (!isNaN(date.getTime())) {
+      const yyyy = date.getFullYear();
+      const MM = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      const HH = String((date.getHours() + 9) % 24).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      const ss = String(date.getSeconds()).padStart(2, '0');
+      return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
     }
+  }
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
+    return dtstr;
+  }
+  return dtstr;
+}
+
 
     // 1. 전체 API fetch
     async function loadDataAndRender() {
