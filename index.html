@@ -28,15 +28,12 @@
 </head>
 <body>
   <div class="container">
-    <!-- 1단: 제목 -->
     <h2>인천공항 출도착 스케줄</h2>
-    <!-- 2단: 출발일 및 업데이트 -->
     <div class="info" id="info-date">
       출발일: <span id="date"></span> /
       갱신시각: <span id="updated_at"></span>
       <button id="refreshBtn" title="API에서 최신 정보 새로고침">⟳ 전체조회</button>
     </div>
-    <!-- 3단: 필터 -->
     <form class="filters" id="filters">
       <label>KAL/OAL
         <select id="kal_oal"><option value="">전체</option><option value="KAL">KAL</option><option value="OAL">OAL</option></select>
@@ -76,9 +73,7 @@
       </label>
       <button class="btn" type="submit">검색</button>
     </form>
-    <!-- 행 개수 표시 -->
     <div id="rowCount"></div>
-    <!-- 4단: 본문 표 -->
     <div style="overflow-x:auto;">
       <table id="skd-table">
         <thead>
@@ -95,19 +90,12 @@
     </div>
   </div>
   <script>
-    // === 구글시트 'skd' 데이터 공개공유로 발급된 JSON URL 입력
     const SHEET_JSON_URL = "https://script.google.com/macros/s/AKfycbwLdDd2AtP6eEM3BDM1aN9p_Gc0J9oetcM8-VI7BEb6oBe2ufwRiACbV1u5eTWniZjQiw/exec";
     let SKD_DATA = [];
-    let lastUpdated = "";
 
-    // KST(hh:mm) 변환 함수
+    // === KST 시간 변환(항공시간용, 예: 202507141230 → 12:30)
     function formatToKST_HHmm(zulu) {
       if (!zulu) return "";
-      let d = new Date(zulu);
-      if (!isNaN(d.getTime())) {
-        d.setHours(d.getHours() + 9);
-        return d.toISOString().substring(11, 16);
-      }
       if (/^\d{12}$/.test(zulu)) {
         return zulu.substring(8,10) + ":" + zulu.substring(10,12);
       }
@@ -115,37 +103,33 @@
       return zulu;
     }
 
-    // updated_at → 항상 한국시간 yyyy-MM-dd HH:mm:ss로 변환
-function toKSTString(dtstr) {
-  if (!dtstr) return "";
-  // ISO 포맷: 2025-07-14T03:49:58.000Z 등만 변환
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(dtstr)) {
-    // 직접 파싱
-    const m = dtstr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-    if (m) {
-      // UTC Date 생성
-      const utc = Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
-      const kst = new Date(utc + 9*60*60*1000);
-      const yyyy = kst.getFullYear();
-      const MM = String(kst.getMonth()+1).padStart(2, '0');
-      const dd = String(kst.getDate()).padStart(2, '0');
-      const HH = String(kst.getHours()).padStart(2, '0');
-      const mm = String(kst.getMinutes()).padStart(2, '0');
-      const ss = String(kst.getSeconds()).padStart(2, '0');
-      return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+    // === updated_at 안전 변환: UTC(ISO)만 변환, KST 포맷은 그대로
+    function toKSTString(dtstr) {
+      if (!dtstr) return "";
+      // ISO 8601 포맷(UTC)만 변환: 2025-07-14T03:49:58.000Z 등
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(dtstr)) {
+        const m = dtstr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+        if (m) {
+          const utc = Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+          const kst = new Date(utc + 9*60*60*1000);
+          const yyyy = kst.getFullYear();
+          const MM = String(kst.getMonth()+1).padStart(2, '0');
+          const dd = String(kst.getDate()).padStart(2, '0');
+          const HH = String(kst.getHours()).padStart(2, '0');
+          const mm = String(kst.getMinutes()).padStart(2, '0');
+          const ss = String(kst.getSeconds()).padStart(2, '0');
+          return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+        }
+        return dtstr;
+      }
+      // yyyy-MM-dd HH:mm:ss(이미 KST)는 절대 변환하지 않고 그대로!
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
+        return dtstr;
+      }
+      // 기타는 그대로
+      return dtstr;
     }
-    return dtstr;
-  }
-  // yyyy-MM-dd HH:mm:ss로 된 값은 절대 Date로 만지지 않고, 그대로 반환!
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
-    return dtstr;
-  }
-  // 그 외는 그대로 반환
-  return dtstr;
-}
 
-
-    // 1. 전체 API fetch
     async function loadDataAndRender() {
       document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터를 불러오는 중...</td></tr>`;
       try {
@@ -154,7 +138,7 @@ function toKSTString(dtstr) {
         renderTable();
         document.getElementById("date").innerText = (SKD_DATA[0]?.date || "");
 
-        // updated_at 컬럼에서 최신값만(KST 변환)
+        // 최신 updated_at만, 반드시 변환 함수 적용
         let latestUpdatedAt = "";
         if (SKD_DATA.length > 0) {
           let sorted = SKD_DATA
@@ -169,7 +153,6 @@ function toKSTString(dtstr) {
       }
     }
 
-    // 2. 테이블 필터+렌더링 (fetch 없이 캐시만 사용)
     function renderTable() {
       let tbody = document.getElementById("skd-tbody");
       let f = {};
@@ -183,7 +166,6 @@ function toKSTString(dtstr) {
         for (let k in f) {
           if (!f[k]) continue;
           if (k === 'ops_hour') {
-            // 1자리 입력도 "09" 등 2자리로 맞추기 위해 padStart 사용
             if (s_hour !== f[k].padStart(2,"0")) return false;
           } else {
             if ((row[k]||"").toString().toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
@@ -191,7 +173,6 @@ function toKSTString(dtstr) {
         }
         return true;
       });
-      // 행 개수 표시
       document.getElementById("rowCount").innerText = `총 ${filtered.length}건`;
       if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="13">일치하는 데이터가 없습니다.</td></tr>`;
@@ -216,18 +197,15 @@ function toKSTString(dtstr) {
       `).join('');
     }
 
-    // 전체조회(새로고침) 버튼 → API fetch + render
     document.getElementById("refreshBtn").onclick = function() {
       loadDataAndRender();
     };
-
-    // 검색/필터: fetch 없이 캐시 데이터만 사용
     document.getElementById("filters").onsubmit = function(e) {
       e.preventDefault();
       renderTable();
     };
 
-    // 최초 1회 전체조회 fetch
+    // 최초 1회 전체조회
     loadDataAndRender();
   </script>
 </body>
