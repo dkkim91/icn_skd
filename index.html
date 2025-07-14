@@ -118,26 +118,29 @@
     // updated_at → 항상 한국시간 yyyy-MM-dd HH:mm:ss로 변환
 function toKSTString(dtstr) {
   if (!dtstr) return "";
-  // ISO 포맷(UTC) → yyyy-MM-dd HH:mm:ss 변환 ONLY!
+  // ISO 포맷: 2025-07-14T03:49:58.000Z 등만 변환
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(dtstr)) {
-    // UTC → KST 직접 변환
-    const parts = dtstr.match(/\d+/g);
-    // parts = [2025,07,14,03,49,58,000] (마이크로초는 생략 가능)
-    const utcDate = Date.UTC(parts[0], parts[1]-1, parts[2], parts[3], parts[4], parts[5]);
-    const kstDate = new Date(utcDate + 9 * 60 * 60 * 1000);
-    const yyyy = kstDate.getFullYear();
-    const MM = String(kstDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(kstDate.getDate()).padStart(2, '0');
-    const HH = String(kstDate.getHours()).padStart(2, '0');
-    const mm = String(kstDate.getMinutes()).padStart(2, '0');
-    const ss = String(kstDate.getSeconds()).padStart(2, '0');
-    return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+    // 직접 파싱
+    const m = dtstr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+    if (m) {
+      // UTC Date 생성
+      const utc = Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+      const kst = new Date(utc + 9*60*60*1000);
+      const yyyy = kst.getFullYear();
+      const MM = String(kst.getMonth()+1).padStart(2, '0');
+      const dd = String(kst.getDate()).padStart(2, '0');
+      const HH = String(kst.getHours()).padStart(2, '0');
+      const mm = String(kst.getMinutes()).padStart(2, '0');
+      const ss = String(kst.getSeconds()).padStart(2, '0');
+      return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+    }
+    return dtstr;
   }
-  // yyyy-MM-dd HH:mm:ss 포맷(이미 KST)은 변환하지 않고 그대로 반환!
+  // yyyy-MM-dd HH:mm:ss로 된 값은 절대 Date로 만지지 않고, 그대로 반환!
   if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
     return dtstr;
   }
-  // 기타 포맷은 원문 그대로
+  // 그 외는 그대로 반환
   return dtstr;
 }
 
