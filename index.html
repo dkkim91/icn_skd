@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>인천공항 출도착 스케줄</title>
+  <title>인천공항 출도착 스케줄(오늘)</title>
   <style>
     body { font-family: 'Malgun Gothic', Arial, sans-serif; margin: 0; background: #f9f9f9; }
     .container { max-width: 1100px; margin: 18px auto; background: #fff; border-radius: 18px; box-shadow: 0 2px 16px #bbb; padding: 18px; }
@@ -118,16 +118,14 @@
 </head>
 <body>
   <div class="container">
-    <h2>인천공항 출도착 스케줄</h2>
+    <h2>인천공항 출도착 스케줄(오늘)</h2>
     <div class="info" id="info-date">
-      출발일: <span id="date"></span> /
+      <!-- 출발일 표시 제거 -->
       갱신시각: <span id="updated_at"></span>
       <button id="refreshBtn" title="API에서 최신 정보 새로고침">⟳ 전체조회</button>
     </div>
     <form class="filters" id="filters">
-      <label>출발일
-        <select id="dateSelect"></select>
-      </label>
+      <!-- 출발일 필터 제거 -->
       <label>KAL/OAL
         <select id="kal_oal">
           <option value="">전체</option>
@@ -265,15 +263,15 @@
         let res = await fetch(SHEET_JSON_URL + "?" + Date.now());
         SKD_DATA = await res.json();
 
-        // 출발일 옵션 동적생성 (오늘/내일만)
-        let dates = [...new Set(SKD_DATA.map(row=>row.date))].sort();
-        let todayStr = (new Date()).toISOString().slice(0,10).replace(/-/g,"");
-        let tomorrowStr = (function(d){ d.setDate(d.getDate()+1); return d.toISOString().slice(0,10).replace(/-/g,""); })(new Date());
-        let dateSelect = document.getElementById("dateSelect");
-        dateSelect.innerHTML = `<option value="">전체</option>` +
-          (dates.includes(todayStr) ? `<option value="${todayStr}">${todayStr}</option>` : "") +
-          (dates.includes(tomorrowStr) ? `<option value="${tomorrowStr}">${tomorrowStr}</option>` : "");
-        dateSelect.value = "";
+        // 출발일 옵션 동적생성 (제거됨)
+        // let dates = [...new Set(SKD_DATA.map(row=>row.date))].sort();
+        // let todayStr = (new Date()).toISOString().slice(0,10).replace(/-/g,"");
+        // let tomorrowStr = (function(d){ d.setDate(d.getDate()+1); return d.toISOString().slice(0,10).replace(/-/g,""); })(new Date());
+        // let dateSelect = document.getElementById("dateSelect");
+        // dateSelect.innerHTML = `<option value="">전체</option>` +
+        //   (dates.includes(todayStr) ? `<option value="${todayStr}">${todayStr}</option>` : "") +
+        //   (dates.includes(tomorrowStr) ? `<option value="${tomorrowStr}">${tomorrowStr}</option>` : "");
+        // dateSelect.value = "";
 
         // 터미널 옵션 동적생성
         let terminalSelect = document.getElementById("terminalId");
@@ -284,7 +282,7 @@
 
 
         renderTable();
-        document.getElementById("date").innerText = (dates[0] || "");
+        // document.getElementById("date").innerText = (dates[0] || ""); // 출발일 표시 제거
 
         // 최신 updated_at 구하기
         let latestUpdatedAt = "";
@@ -308,13 +306,13 @@
     function renderTable() {
       let tbody = document.getElementById("skd-tbody");
       let f = {};
-      // 필터 항목 업데이트: airlineCodeFilter 추가
-      ["dateSelect","kal_oal","airlineCodeFilter","flightId","sector","op_type","status","terminalId", "gateNumberFilter", "carouselFilter", "exitNumberFilter"].forEach(id=>{
+      // 필터 항목 업데이트: dateSelect 제거
+      ["kal_oal","airlineCodeFilter","flightId","sector","op_type","status","terminalId", "gateNumberFilter", "carouselFilter", "exitNumberFilter"].forEach(id=>{
         f[id] = document.getElementById(id).value.trim();
       });
 
       let filtered = SKD_DATA.filter(row => {
-        if (f.dateSelect && row.date != f.dateSelect) return false;
+        // if (f.dateSelect && row.date != f.dateSelect) return false; // 출발일 필터링 로직 제거
         if (f.kal_oal && row.kal_oal != f.kal_oal) return false;
         // 항공사 코드 필터링 (편명 앞 2글자)
         if (f.airlineCodeFilter && (!row.flightId || !row.flightId.startsWith(f.airlineCodeFilter.toUpperCase()))) return false;
