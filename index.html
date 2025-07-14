@@ -58,13 +58,13 @@
         flex-direction: row; /* 필터 항목을 가로로 배치 */
         justify-content: space-between; /* 항목들을 양 끝으로 정렬 */
         align-items: flex-start; /* 상단 정렬 */
-        gap: 5px; /* 가로 간격 줄임 */
+        gap: 10px; /* 가로 간격 조정 */
         padding: 0 5px; /* 모바일에서 좌우 여백 조정 */
       }
       .filters label {
         flex-direction: column; /* 라벨과 입력 필드를 세로로 쌓음 */
         align-items: flex-start; /* 왼쪽 정렬 */
-        width: calc(50% - 5px); /* 한 줄에 2개씩 표시 */
+        width: calc(50% - 5px); /* 한 줄에 2개씩 표시 (gap 고려) */
         margin-right: 0; /* 기본 마진 제거 */
         gap: 2px; /* 라벨과 입력 필드 사이 간격 줄임 */
       }
