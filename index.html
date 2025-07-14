@@ -115,6 +115,30 @@
       return zulu;
     }
 
+    // updated_at → 항상 한국시간 yyyy-MM-dd HH:mm:ss로 변환
+    function toKSTString(dtstr) {
+      if (!dtstr) return "";
+      // ISO 포맷(2025-07-14T03:37:23.000Z)만 변환
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(dtstr)) {
+        // UTC → KST 변환
+        const date = new Date(dtstr);
+        if (!isNaN(date.getTime())) {
+          const yyyy = date.getFullYear();
+          const MM = String(date.getMonth() + 1).padStart(2, '0');
+          const dd = String(date.getDate()).padStart(2, '0');
+          const HH = String((date.getHours() + 9) % 24).padStart(2, '0');
+          const mm = String(date.getMinutes()).padStart(2, '0');
+          const ss = String(date.getSeconds()).padStart(2, '0');
+          return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+        }
+      }
+      // yyyy-MM-dd HH:mm:ss 이미 변환되어 있으면 그대로
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
+        return dtstr;
+      }
+      return dtstr;
+    }
+
     // 1. 전체 API fetch
     async function loadDataAndRender() {
       document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터를 불러오는 중...</td></tr>`;
@@ -123,11 +147,19 @@
         SKD_DATA = await res.json();
         renderTable();
         document.getElementById("date").innerText = (SKD_DATA[0]?.date || "");
-        // updated_at은 KST(hh:mm:ss)로
-        lastUpdated = new Date().toLocaleString('ko-KR', {hour12:false});
-        document.getElementById("updated_at").innerText = lastUpdated;
+
+        // updated_at 컬럼에서 최신값만(KST 변환)
+        let latestUpdatedAt = "";
+        if (SKD_DATA.length > 0) {
+          let sorted = SKD_DATA
+            .filter(r => r.updated_at)
+            .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
+          latestUpdatedAt = sorted.length > 0 ? sorted[0].updated_at : "";
+        }
+        document.getElementById("updated_at").innerText = toKSTString(latestUpdatedAt) || "-";
       } catch(e) {
         document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터 로드 오류</td></tr>`;
+        document.getElementById("updated_at").innerText = "- (오류)";
       }
     }
 
