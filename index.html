@@ -4,7 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>인천공항 출도착 스케줄</title>
-  <!-- (스타일 생략) -->
+  <style>
+    body { font-family: 'Malgun Gothic', Arial, sans-serif; margin: 0; background: #f9f9f9; }
+    .container { max-width: 900px; margin: 10px auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px #ccc; padding: 16px; }
+    h2 { text-align: center; margin-bottom: 10px; color: #222; }
+    .info { text-align: center; font-size: 0.95em; color: #444; margin-bottom: 8px; }
+    table { width:100%; border-collapse:collapse; margin-top: 6px; }
+    th,td { padding:5px 3px; border-bottom:1px solid #e2e2e2; font-size:0.97em; text-align:center;}
+    th { background:#f2f5fa; color:#2563eb; }
+    tr:nth-child(even) { background:#fafbff; }
+    #rowCount { font-weight:bold; margin:10px 0 0 2px; text-align:right;}
+    #refreshBtn { margin-left:10px; background:#e1e8ff; color:#222; border:1px solid #7ca5ea; border-radius:6px; padding:3px 9px; cursor:pointer; }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -14,7 +25,25 @@
       갱신시각: <span id="updated_at"></span>
       <button id="refreshBtn" title="API에서 최신 정보 새로고침">⟳ 전체조회</button>
     </div>
-    <!-- (필터, 테이블 등 생략) -->
+    <!-- 필터 검색 폼 (id="filters" 필수!) -->
+    <form class="filters" id="filters" style="margin-bottom:12px;">
+      <input type="text" id="airline" placeholder="항공사" />
+      <input type="text" id="flightId" placeholder="편명" />
+      <button class="btn" type="submit">검색</button>
+    </form>
+    <div id="rowCount"></div>
+    <div style="overflow-x:auto;">
+      <table id="skd-table">
+        <thead>
+          <tr>
+            <th>항공사</th><th>편명</th><th>출발일</th>
+          </tr>
+        </thead>
+        <tbody id="skd-tbody">
+          <tr><td colspan="3">데이터를 불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
   <script>
     const SHEET_JSON_URL = "https://script.google.com/macros/s/AKfycbwLdDd2AtP6eEM3BDM1aN9p_Gc0J9oetcM8-VI7BEb6oBe2ufwRiACbV1u5eTWniZjQiw/exec";
@@ -44,14 +73,14 @@
     }
 
     async function loadDataAndRender() {
-      document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터를 불러오는 중...</td></tr>`;
+      document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="3">데이터를 불러오는 중...</td></tr>`;
       try {
         let res = await fetch(SHEET_JSON_URL + "?" + Date.now());
         SKD_DATA = await res.json();
-        // (필터링/테이블 출력 생략)
+        renderTable();
         document.getElementById("date").innerText = (SKD_DATA[0]?.date || "");
 
-        // 최신 updated_at 구하고
+        // 최신 updated_at 구하고 콘솔 출력
         let latestUpdatedAt = "";
         if (SKD_DATA.length > 0) {
           let sorted = SKD_DATA
@@ -59,15 +88,37 @@
             .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
           latestUpdatedAt = sorted.length > 0 ? sorted[0].updated_at : "";
         }
-        // ★ 콘솔로 원본값 찍기!
+        // 콘솔로 원본값 확인!
         console.log("latestUpdatedAt 원본:", latestUpdatedAt);
 
-        // 변환된 값 화면에 출력
         document.getElementById("updated_at").innerText = toKSTString(latestUpdatedAt) || "-";
       } catch(e) {
-        document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터 로드 오류</td></tr>`;
+        document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="3">데이터 로드 오류</td></tr>`;
         document.getElementById("updated_at").innerText = "- (오류)";
       }
+    }
+
+    function renderTable() {
+      let tbody = document.getElementById("skd-tbody");
+      let airline = document.getElementById("airline").value.trim();
+      let flightId = document.getElementById("flightId").value.trim();
+      let filtered = SKD_DATA.filter(row => {
+        if (airline && (!row.airline || row.airline.indexOf(airline) === -1)) return false;
+        if (flightId && (!row.flightId || row.flightId.indexOf(flightId) === -1)) return false;
+        return true;
+      });
+      document.getElementById("rowCount").innerText = `총 ${filtered.length}건`;
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3">일치하는 데이터가 없습니다.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(row=>`
+        <tr>
+          <td>${row.airline||""}</td>
+          <td>${row.flightId||""}</td>
+          <td>${row.date||""}</td>
+        </tr>
+      `).join('');
     }
 
     document.getElementById("refreshBtn").onclick = function() {
