@@ -139,8 +139,12 @@
       <label>편명
         <input type="text" id="flightId" placeholder="예: KE123" />
       </label>
-      <label>구간
-        <input type="text" id="sector" placeholder="예: ICN/NRT" />
+      <!-- 구간 필터 대신 시간대 필터 추가 -->
+      <label>시간대
+        <select id="opsHourFilter">
+          <option value="">전체</option>
+          <!-- 시간대 옵션은 JavaScript에서 동적으로 추가됩니다 -->
+        </select>
       </label>
       <label>출도착
         <select id="op_type">
@@ -181,7 +185,7 @@
             <th>출발일</th>
             <th class="two-line">KAL/<br>OAL</th>
             <th class="two-line">편명</th>
-            <th>구간</th>
+            <th>구간</th> <!-- 구간 컬럼은 유지 -->
             <th>출도착</th>
             <th>예정시간</th>
             <th>실제시간</th>
@@ -264,21 +268,24 @@
         SKD_DATA = await res.json();
 
         // 출발일 옵션 동적생성 (제거됨)
-        // let dates = [...new Set(SKD_DATA.map(row=>row.date))].sort();
-        // let todayStr = (new Date()).toISOString().slice(0,10).replace(/-/g,"");
-        // let tomorrowStr = (function(d){ d.setDate(d.getDate()+1); return d.toISOString().slice(0,10).replace(/-/g,""); })(new Date());
-        // let dateSelect = document.getElementById("dateSelect");
-        // dateSelect.innerHTML = `<option value="">전체</option>` +
-        //   (dates.includes(todayStr) ? `<option value="${todayStr}">${todayStr}</option>` : "") +
-        //   (dates.includes(tomorrowStr) ? `<option value="${tomorrowStr}">${tomorrowStr}</option>` : "");
-        // dateSelect.value = "";
-
         // 터미널 옵션 동적생성
         let terminalSelect = document.getElementById("terminalId");
         let terminals = [...new Set(SKD_DATA.map(row => row.terminalId).filter(t => t))].sort();
         terminalSelect.innerHTML = `<option value="">전체</option>` + 
                                    terminals.map(t => `<option value="${t}">${t}</option>`).join('');
         terminalSelect.value = "";
+
+        // 시간대 옵션 동적생성
+        let opsHourSelect = document.getElementById("opsHourFilter");
+        let opsHours = [...new Set(SKD_DATA.map(row => row.ops_hour).filter(h => h !== undefined && h !== null))].sort((a,b) => a-b);
+        opsHourSelect.innerHTML = `<option value="">전체</option>` + 
+                                  opsHours.map(h => {
+                                    const nextHour = (h + 1) % 24;
+                                    const hourStr = String(h).padStart(2, '0');
+                                    const nextHourStr = String(nextHour).padStart(2, '0');
+                                    return `<option value="${h}">${hourStr}시-${nextHourStr}시</option>`;
+                                  }).join('');
+        opsHourSelect.value = "";
 
 
         renderTable();
@@ -306,18 +313,21 @@
     function renderTable() {
       let tbody = document.getElementById("skd-tbody");
       let f = {};
-      // 필터 항목 업데이트: dateSelect 제거
-      ["kal_oal","airlineCodeFilter","flightId","sector","op_type","status","terminalId", "gateNumberFilter", "carouselFilter", "exitNumberFilter"].forEach(id=>{
+      // 필터 항목 업데이트: sector 제거, opsHourFilter 추가
+      ["kal_oal","airlineCodeFilter","flightId","opsHourFilter","op_type","status","terminalId", "gateNumberFilter", "carouselFilter", "exitNumberFilter"].forEach(id=>{
         f[id] = document.getElementById(id).value.trim();
       });
 
       let filtered = SKD_DATA.filter(row => {
-        // if (f.dateSelect && row.date != f.dateSelect) return false; // 출발일 필터링 로직 제거
         if (f.kal_oal && row.kal_oal != f.kal_oal) return false;
         // 항공사 코드 필터링 (편명 앞 2글자)
         if (f.airlineCodeFilter && (!row.flightId || !row.flightId.startsWith(f.airlineCodeFilter.toUpperCase()))) return false;
         if (f.flightId && (!row.flightId || row.flightId.indexOf(f.flightId) === -1)) return false;
-        if (f.sector && (!row.sector || row.sector.indexOf(f.sector) === -1)) return false;
+        // if (f.sector && (!row.sector || row.sector.indexOf(f.sector) === -1)) return false; // 구간 필터링 로직 제거
+        
+        // 시간대 필터링 로직 추가
+        if (f.opsHourFilter && row.ops_hour != parseInt(f.opsHourFilter)) return false;
+
         if (f.op_type && row.op_type != f.op_type) return false;
         if (f.status && row.status != f.status) return false;
         if (f.terminalId && row.terminalId != f.terminalId) return false; // 터미널은 정확히 일치해야 함
