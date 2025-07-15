@@ -48,7 +48,23 @@
     tr:nth-child(even) { background:#f9fbff; }
     #rowCount { font-weight:bold; margin:10px 0 0 2px; text-align:right;}
     #refreshBtn { margin-left:10px; background:#e1e8ff; color:#222; border:1px solid #7ca5ea; border-radius:6px; padding:3px 9px; cursor:pointer; }
+    #clearHighlightsBtn { 
+      margin-left:5px; 
+      background:#f0f0f0; 
+      color:#555; 
+      border:1px solid #ccc; 
+      border-radius:6px; 
+      padding:3px 9px; 
+      cursor:pointer; 
+      font-size:0.9em;
+    }
     
+    /* 변경된 항목에 노란색 배경 */
+    .changed-field {
+      background-color: #FFFF00 !important; /* 노란색 배경 */
+      transition: background-color 0.5s ease; /* 부드러운 전환 효과 */
+    }
+
     /* 모바일 최적화 */
     @media (max-width:900px) {
       .container { padding:8px;}
@@ -68,7 +84,7 @@
         margin-right: 0; /* 기본 마진 제거 */
         gap: 2px; /* 라벨과 입력 필드 사이 간격 줄임 */
       }
-      .filters input, .filters select {
+      .filters input, .filters .filters select {
         width: 100%; /* 입력 필드가 라벨 너비를 채우도록 */
         max-width: none; /* 최대 너비 제한 해제 */
         box-sizing: border-box; /* 패딩과 보더가 너비에 포함되도록 */
@@ -120,12 +136,11 @@
   <div class="container">
     <h2>인천공항 출도착 스케줄(오늘)</h2>
     <div class="info" id="info-date">
-      <!-- 출발일 표시 제거 -->
       갱신시각: <span id="updated_at"></span>
       <button id="refreshBtn" title="API에서 최신 정보 새로고침">⟳ 전체조회</button>
+      <button id="clearHighlightsBtn" title="현재 보이는 변경사항 하이라이트 지우기">하이라이트 지우기</button>
     </div>
     <form class="filters" id="filters">
-      <!-- 출발일 필터 제거 -->
       <label>KAL/OAL
         <select id="kal_oal">
           <option value="">전체</option>
@@ -139,7 +154,6 @@
       <label>편명
         <input type="text" id="flightId" placeholder="예: KE123" />
       </label>
-      <!-- 구간 필터 대신 시간대 필터 추가 -->
       <label>시간대
         <select id="opsHourFilter">
           <option value="">전체</option>
@@ -167,15 +181,22 @@
         </select>
       </label>
       <label>게이트
-        <input type="text" id="gateNumberFilter" size="2" />
+        <select id="gateNumberFilter">
+          <option value="">전체</option>
+        </select>
       </label>
       <label>Carousel
-        <input type="text" id="carouselFilter" size="2" />
+        <select id="carouselFilter">
+          <option value="">전체</option>
+        </select>
       </label>
       <label>Exit
-        <input type="text" id="exitNumberFilter" size="2" />
+        <select id="exitNumberFilter">
+          <option value="">전체</option>
+        </select>
       </label>
       <button class="btn" type="submit">검색</button>
+      <button class="btn" type="reset">초기화</button>
     </form>
     <div id="rowCount"></div>
     <div style="overflow-x:auto;">
@@ -185,7 +206,7 @@
             <th>출발일</th>
             <th class="two-line">KAL/<br>OAL</th>
             <th class="two-line">편명</th>
-            <th>구간</th> <!-- 구간 컬럼은 유지 -->
+            <th>구간</th>
             <th>출도착</th>
             <th>예정시간</th>
             <th>실제시간</th>
@@ -204,51 +225,49 @@
     </div>
   </div>
   <script>
+    // Google Apps Script 웹 앱 URL (doGet 함수가 배포된 URL)
     const SHEET_JSON_URL = "https://script.google.com/macros/s/AKfycbwLdDd2AtP6eEM3BDM1aN9p_Gc0J9oetcM8-VI7BEb6oBe2ufwRiACbV1u5eTWniZjQiw/exec";
-    let SKD_DATA = [];
+    let SKD_DATA = []; // 현재 시트 데이터
+    let LAST_CHANGES_FROM_SERVER = []; // 서버가 마지막으로 감지한 변경사항 (전역)
+    let lastAcknowledgedUpdateTime = localStorage.getItem('lastAcknowledgedUpdateTime') || ''; // 사용자별 마지막 확인 시점
 
     // --- 시간 변환 함수 (UTC ISO 문자열을 브라우저의 로컬 시간대(KST)로 변환) ---
     function toKSTString(dtstr) {
       if (!dtstr) {
         return "";
       }
-
       try {
-        // ISO 8601 문자열 (예: "...Z")은 Date 객체에서 UTC로 파싱 후 브라우저의 로컬 시간으로 자동 변환됩니다.
         const dateObj = new Date(dtstr); 
-        
-        // Date 객체가 유효하고, 원본 문자열이 ISO UTC 형식인지 확인 (Z로 끝나는지)
         if (!isNaN(dateObj.getTime()) && dtstr.endsWith('Z')) {
-          // Date 객체의 로컬 시간 구성 요소를 사용하여 KST 문자열 생성
           const yyyy = dateObj.getFullYear();
           const MM = String(dateObj.getMonth() + 1).padStart(2, '0');
           const dd = String(dateObj.getDate()).padStart(2, '0');
           const HH = String(dateObj.getHours()).padStart(2, '0');
           const mm = String(dateObj.getMinutes()).padStart(2, '0');
           const ss = String(dateObj.getSeconds()).padStart(2, '0');
-          
           return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
         }
       } catch (e) {
-        console.error("Date parsing error:", e); // 날짜 파싱 중 오류 발생 시 콘솔에 기록
+        console.error("Date parsing error:", e);
       }
-
-      // ISO UTC 형식이 아니거나 파싱에 실패한 경우, 이미 'YYYY-MM-DD HH:mm:ss' 형식인지 확인
       const kstFormatRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
       if (kstFormatRegex.test(dtstr)) {
         return dtstr;
       }
-
-      return dtstr; // 그 외의 경우 원본 문자열 반환
+      return dtstr;
     }
 
-    // --- 시간 변환 함수 (UTC ISO 문자열을 HH:mm 형식으로 변환) ---
+    // --- 시간 변환 함수 (API에서 받은 시간 문자열을 HH:mm 형식으로 변환) ---
     function toHHMMString(dtstr) {
       if (!dtstr) {
         return "";
       }
+      // 이미 H:MM 형식인 경우 그대로 반환
+      if (typeof dtstr === 'string' && dtstr.match(/^\d{1,2}:\d{2}$/)) {
+          return dtstr;
+      }
       try {
-        const dateObj = new Date(dtstr);
+        const dateObj = new Date(dtstr); // ISO 또는 다른 날짜/시간 문자열 파싱 시도
         if (!isNaN(dateObj.getTime())) {
           const HH = String(dateObj.getHours()).padStart(2, '0');
           const mm = String(dateObj.getMinutes()).padStart(2, '0');
@@ -265,19 +284,23 @@
       document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터를 불러오는 중...</td></tr>`;
       try {
         let res = await fetch(SHEET_JSON_URL + "?" + Date.now());
-        SKD_DATA = await res.json();
+        const responseData = await res.json();
 
-        // 출발일 옵션 동적생성 (제거됨)
+        // Google Apps Script에서 반환된 데이터 구조에 따라 SKD_DATA와 LAST_CHANGES_FROM_SERVER 설정
+        SKD_DATA = responseData.currentData;
+        LAST_CHANGES_FROM_SERVER = responseData.lastChanges || [];
+        const columns = responseData.columns; // 컬럼 정보도 함께 받아옴
+
         // 터미널 옵션 동적생성
         let terminalSelect = document.getElementById("terminalId");
-        let terminals = [...new Set(SKD_DATA.map(row => row.terminalId).filter(t => t))].sort();
+        let terminals = [...new Set(SKD_DATA.map(row => row[columns.indexOf("terminalId")]).filter(t => t))].sort();
         terminalSelect.innerHTML = `<option value="">전체</option>` + 
                                    terminals.map(t => `<option value="${t}">${t}</option>`).join('');
         terminalSelect.value = "";
 
         // 시간대 옵션 동적생성
         let opsHourSelect = document.getElementById("opsHourFilter");
-        let opsHours = [...new Set(SKD_DATA.map(row => row.ops_hour).filter(h => h !== undefined && h !== null))].sort((a,b) => a-b);
+        let opsHours = [...new Set(SKD_DATA.map(row => row[columns.indexOf("ops_hour")]).filter(h => h !== undefined && h !== null))].sort((a,b) => a-b);
         opsHourSelect.innerHTML = `<option value="">전체</option>` + 
                                   opsHours.map(h => {
                                     const nextHour = (h + 1) % 24;
@@ -287,21 +310,52 @@
                                   }).join('');
         opsHourSelect.value = "";
 
+        // 게이트 옵션 동적생성
+        let gateNumberSelect = document.getElementById("gateNumberFilter");
+        let gateNumbers = [...new Set(SKD_DATA.map(row => row[columns.indexOf("gateNumber")]).filter(g => g))].sort((a,b) => String(a).localeCompare(String(b)));
+        gateNumberSelect.innerHTML = `<option value="">전체</option>` + 
+                                     gateNumbers.map(g => `<option value="${g}">${g}</option>`).join('');
+        gateNumberSelect.value = "";
 
-        renderTable();
-        // document.getElementById("date").innerText = (dates[0] || ""); // 출발일 표시 제거
+        // Carousel 옵션 동적생성
+        let carouselSelect = document.getElementById("carouselFilter");
+        let carousels = [...new Set(SKD_DATA.map(row => row[columns.indexOf("carousel")]).filter(c => c))].sort((a,b) => String(a).localeCompare(String(b)));
+        carouselSelect.innerHTML = `<option value="">전체</option>` + 
+                                   carousels.map(c => `<option value="${c}">${c}</option>`).join('');
+        carouselSelect.value = "";
+
+        // Exit 옵션 동적생성
+        let exitNumberSelect = document.getElementById("exitNumberFilter");
+        let exitNumbers = [...new Set(SKD_DATA.map(row => row[columns.indexOf("exitNumber")]).filter(e => e))].sort((a,b) => String(a).localeCompare(String(b)));
+        exitNumberSelect.innerHTML = `<option value="">전체</option>` + 
+                                     exitNumbers.map(e => `<option value="${e}">${e}</option>`).join('');
+        exitNumberSelect.value = "";
+
 
         // 최신 updated_at 구하기
         let latestUpdatedAt = "";
         if (SKD_DATA.length > 0) {
-          let sorted = SKD_DATA
-            .filter(r => r.updated_at)
-            .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
-          latestUpdatedAt = sorted.length > 0 ? sorted[0].updated_at : "";
+          // updated_at 컬럼 인덱스 찾기
+          const updatedAtColIdx = columns.indexOf("updated_at");
+          if (updatedAtColIdx !== -1) {
+            let sorted = SKD_DATA
+              .filter(r => r[updatedAtColIdx])
+              .sort((a, b) => (a[updatedAtColIdx] < b[updatedAtColIdx] ? 1 : -1));
+            latestUpdatedAt = sorted.length > 0 ? sorted[0][updatedAtColIdx] : "";
+          }
         }
         
         // KST로 변환하여 표시
         document.getElementById("updated_at").innerText = toKSTString(latestUpdatedAt) || "-";
+
+        // 사용자별 마지막 확인 시점 업데이트 (로컬 스토리지)
+        // 페이지 로드 시, 로컬 스토리지에 값이 없으면 현재 최신 갱신 시각을 초기값으로 설정
+        if (!lastAcknowledgedUpdateTime) {
+            lastAcknowledgedUpdateTime = latestUpdatedAt;
+            localStorage.setItem('lastAcknowledgedUpdateTime', lastAcknowledgedUpdateTime);
+        }
+
+        renderTable();
 
       } catch(e) {
         document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터 로드 오류</td></tr>`;
@@ -313,52 +367,134 @@
     function renderTable() {
       let tbody = document.getElementById("skd-tbody");
       let f = {};
-      // 필터 항목 업데이트: sector 제거, opsHourFilter 추가
       ["kal_oal","airlineCodeFilter","flightId","opsHourFilter","op_type","status","terminalId", "gateNumberFilter", "carouselFilter", "exitNumberFilter"].forEach(id=>{
         f[id] = document.getElementById(id).value.trim();
       });
 
+      // 컬럼 인덱스를 미리 가져옴
+      const headerRow = document.getElementById("skd-table").querySelector("thead tr").children;
+      const columns = Array.from(headerRow).map(th => th.innerText.replace(/\n/g, '').trim());
+      const getColumnIndex = (colName) => {
+          // HTML 테이블 헤더와 실제 데이터 배열의 순서가 다를 수 있으므로 매핑
+          const dataCols = ["date", "kal_oal", "airline", "flightId", "sector", "op_type", "passengerOrCargo",
+                            "typeOfFlight", "ops_hour", "scheduleDatetime", "estimatedDatetime", "s_time", "e_time",
+                            "difftime", "status", "terminalId", "chkinRange", "gateNumber", "aircraftSubtype", "carousel", "exitNumber", "updated_at"];
+          
+          switch(colName) {
+              case "출발일": return dataCols.indexOf("date");
+              case "KAL/OAL": return dataCols.indexOf("kal_oal");
+              case "편명": return dataCols.indexOf("flightId");
+              case "구간": return dataCols.indexOf("sector");
+              case "출도착": return dataCols.indexOf("op_type");
+              case "예정시간": return dataCols.indexOf("s_time");
+              case "실제시간": return dataCols.indexOf("e_time");
+              case "상태": return dataCols.indexOf("status");
+              case "터미널": return dataCols.indexOf("terminalId");
+              case "게이트": return dataCols.indexOf("gateNumber");
+              case "기종": return dataCols.indexOf("aircraftSubtype");
+              case "Carousel": return dataCols.indexOf("carousel");
+              case "Exit": return dataCols.indexOf("exitNumber");
+              default: return -1;
+          }
+      };
+      
       let filtered = SKD_DATA.filter(row => {
-        if (f.kal_oal && row.kal_oal != f.kal_oal) return false;
-        // 항공사 코드 필터링 (편명 앞 2글자)
-        if (f.airlineCodeFilter && (!row.flightId || !row.flightId.startsWith(f.airlineCodeFilter.toUpperCase()))) return false;
-        if (f.flightId && (!row.flightId || row.flightId.indexOf(f.flightId) === -1)) return false;
-        // if (f.sector && (!row.sector || row.sector.indexOf(f.sector) === -1)) return false; // 구간 필터링 로직 제거
-        
-        // 시간대 필터링 로직 추가
-        if (f.opsHourFilter && row.ops_hour != parseInt(f.opsHourFilter)) return false;
+        // row는 API에서 가져온 배열 형태의 데이터
+        const kalOalIdx = getColumnIndex("KAL/OAL");
+        const flightIdIdx = getColumnIndex("편명");
+        const opsHourIdx = getColumnIndex("ops_hour"); // ops_hour는 HTML 테이블 헤더에 직접 없음, 데이터 컬럼 이름으로 접근
+        const opTypeIdx = getColumnIndex("출도착");
+        const statusIdx = getColumnIndex("상태");
+        const terminalIdIdx = getColumnIndex("터미널");
+        const gateNumberIdx = getColumnIndex("게이트");
+        const carouselIdx = getColumnIndex("Carousel");
+        const exitNumberIdx = getColumnIndex("Exit");
+        const airlineIdx = getColumnIndex("airline"); // 항공사 필터링을 위해 airline 컬럼 인덱스 필요
 
-        if (f.op_type && row.op_type != f.op_type) return false;
-        if (f.status && row.status != f.status) return false;
-        if (f.terminalId && row.terminalId != f.terminalId) return false; // 터미널은 정확히 일치해야 함
-        if (f.gateNumberFilter && (!row.gateNumber || String(row.gateNumber).indexOf(f.gateNumberFilter) === -1)) return false;
-        if (f.carouselFilter && (!row.carousel || String(row.carousel).indexOf(f.carouselFilter) === -1)) return false;
-        if (f.exitNumberFilter && (!row.exitNumber || String(row.exitNumber).indexOf(f.exitNumberFilter) === -1)) return false;
+        if (f.kal_oal && row[kalOalIdx] != f.kal_oal) return false;
+        // 항공사 코드 필터링 (flightId 앞 2글자 또는 airline 컬럼 사용)
+        if (f.airlineCodeFilter) {
+            const filterCode = f.airlineCodeFilter.toUpperCase();
+            if (!row[flightIdIdx] || (!String(row[flightIdIdx]).startsWith(filterCode) && (!row[airlineIdx] || !String(row[airlineIdx]).includes(filterCode)))) {
+                return false;
+            }
+        }
+        if (f.flightId && (!row[flightIdIdx] || String(row[flightIdIdx]).indexOf(f.flightId) === -1)) return false;
+        
+        if (f.opsHourFilter && row[opsHourIdx] != parseInt(f.opsHourFilter)) return false;
+
+        if (f.op_type && row[opTypeIdx] != f.op_type) return false;
+        if (f.status && row[statusIdx] != f.status) return false;
+        if (f.terminalId && row[terminalIdIdx] != f.terminalId) return false;
+        if (f.gateNumberFilter && (!row[gateNumberIdx] || String(row[gateNumberIdx]) != f.gateNumberFilter)) return false; // 드롭다운은 정확히 일치
+        if (f.carouselFilter && (!row[carouselIdx] || String(row[carouselIdx]) != f.carouselFilter)) return false; // 드롭다운은 정확히 일치
+        if (f.exitNumberFilter && (!row[exitNumberIdx] || String(row[exitNumberIdx]) != f.exitNumberFilter)) return false; // 드롭다운은 정확히 일치
         return true;
       });
+
       document.getElementById("rowCount").innerText = `총 ${filtered.length}건`;
-      // colspan을 13으로 업데이트 (기존 9 - 항공사 1 + 예정시간, 실제시간, 기종, Carousel, Exit 5 = 13)
+      
       if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="13">일치하는 데이터가 없습니다.</td></tr>`;
         return;
       }
-      tbody.innerHTML = filtered.map(row=>`
-        <tr>
-          <td>${String(row.date).slice(4,6)}/${String(row.date).slice(6,8)}</td> <!-- 출발일 MMDD 형식으로 표시 -->
-          <td class="two-line">${row.kal_oal||""}</td> <!-- KAL/OAL 두 줄로 표시 -->
-          <td class="two-line">${row.flightId ? row.flightId.slice(0,2) + '<br>' + row.flightId.slice(2) : ""}</td> <!-- 편명 두 줄로 표시 -->
-          <td>${row.sector||""}</td>
-          <td>${row.op_type||""}</td>
-          <td>${toHHMMString(row.s_time)||""}</td> <!-- 예정시간 HH:mm 형식으로 표시 -->
-          <td>${toHHMMString(row.e_time)||""}</td> <!-- 실제시간 HH:mm 형식으로 표시 -->
-          <td>${row.status||""}</td>
-          <td>${row.terminalId||""}</td>
-          <td>${row.gateNumber||""}</td>
-          <td>${row.aircraftSubtype||""}</td> <!-- 기종 추가 -->
-          <td>${row.carousel||""}</td> <!-- Carousel 추가 -->
-          <td>${row.exitNumber||""}</td> <!-- Exit 추가 -->
-        </tr>
-      `).join('');
+
+      // HTML 테이블 컬럼명과 데이터 배열 인덱스 매핑 (실제 데이터 컬럼 순서)
+      const dataColumnNames = ["date", "kal_oal", "airline", "flightId", "sector", "op_type", "passengerOrCargo",
+                               "typeOfFlight", "ops_hour", "scheduleDatetime", "estimatedDatetime", "s_time", "e_time",
+                               "difftime", "status", "terminalId", "chkinRange", "gateNumber", "aircraftSubtype", "carousel", "exitNumber", "updated_at"];
+
+      tbody.innerHTML = filtered.map(row => {
+        const rowFlightId = row[dataColumnNames.indexOf("flightId")];
+        const rowOpType = row[dataColumnNames.indexOf("op_type")];
+        const rowScheduleDatetime = row[dataColumnNames.indexOf("scheduleDatetime")];
+        const rowUpdatedAt = row[dataColumnNames.indexOf("updated_at")]; // 현재 행의 updated_at
+        
+        // 이 행이 서버에서 감지된 변경사항에 포함되었는지 찾기
+        const changedEntry = LAST_CHANGES_FROM_SERVER.find(change =>
+            // flightId, op_type, scheduleDatetime으로 고유한 변경사항 식별
+            safe(change.row[dataColumnNames.indexOf("flightId")]) === safe(rowFlightId) &&
+            safe(change.row[dataColumnNames.indexOf("op_type")]) === safe(rowOpType) &&
+            safe(change.row[dataColumnNames.indexOf("scheduleDatetime")]) === safe(rowScheduleDatetime)
+        );
+
+        // 특정 필드가 변경되었는지 확인하고 CSS 클래스를 반환하는 헬퍼 함수
+        const getCellClass = (fieldDataName, currentValue) => {
+            // 1. 서버가 감지한 변경사항에 포함되어 있고 (changedEntry가 존재)
+            // 2. 해당 변경사항의 updated_at이 사용자의 lastAcknowledgedUpdateTime보다 최신인 경우
+            // (즉, 사용자가 아직 확인하지 않은 변경사항인 경우)
+            // 3. 그리고 해당 필드가 실제로 변경된 필드 목록 (diff)에 포함되어 있는 경우
+            if (changedEntry && changedEntry.diff && new Date(rowUpdatedAt) > new Date(lastAcknowledgedUpdateTime)) {
+                // diff 배열에서 해당 필드의 변경사항을 찾음
+                // d.after 값과 현재 표시될 값이 일치하는지 확인 (정규화된 값 기준)
+                const diffEntry = changedEntry.diff.find(d => d.field === fieldDataName);
+                // 중요: diffEntry.after와 currentValue를 비교하여 실제 값이 일치하는 경우에만 하이라이트
+                // 이는 API에서 받아온 데이터와 화면에 표시되는 데이터의 형식이 다를 수 있기 때문
+                if (diffEntry && safe(diffEntry.after) === safe(currentValue)) {
+                    return 'changed-field';
+                }
+            }
+            return '';
+        };
+
+        return `
+          <tr>
+            <td class="${getCellClass('date', String(row[dataColumnNames.indexOf("date")]).slice(4,6)+'/'+String(row[dataColumnNames.indexOf("date")]).slice(6,8))}">${String(row[dataColumnNames.indexOf("date")]).slice(4,6)}/${String(row[dataColumnNames.indexOf("date")]).slice(6,8)}</td>
+            <td class="two-line ${getCellClass('kal_oal', row[dataColumnNames.indexOf("kal_oal")]||"")}">${row[dataColumnNames.indexOf("kal_oal")]||""}</td>
+            <td class="two-line ${getCellClass('flightId', row[dataColumnNames.indexOf("flightId")]||"")}">${row[dataColumnNames.indexOf("flightId")] ? row[dataColumnNames.indexOf("flightId")].slice(0,2) + '<br>' + row[dataColumnNames.indexOf("flightId")].slice(2) : ""}</td>
+            <td class="${getCellClass('sector', row[dataColumnNames.indexOf("sector")]||"")}">${row[dataColumnNames.indexOf("sector")]||""}</td>
+            <td class="${getCellClass('op_type', row[dataColumnNames.indexOf("op_type")]||"")}">${row[dataColumnNames.indexOf("op_type")]||""}</td>
+            <td class="${getCellClass('s_time', toHHMMString(row[dataColumnNames.indexOf("s_time")]||""))}">${toHHMMString(row[dataColumnNames.indexOf("s_time")]||"")}</td>
+            <td class="${getCellClass('e_time', toHHMMString(row[dataColumnNames.indexOf("e_time")]||""))}">${toHHMMString(row[dataColumnNames.indexOf("e_time")]||"")}</td>
+            <td class="${getCellClass('status', row[dataColumnNames.indexOf("status")]||"")}">${row[dataColumnNames.indexOf("status")]||""}</td>
+            <td class="${getCellClass('terminalId', row[dataColumnNames.indexOf("terminalId")]||"")}">${row[dataColumnNames.indexOf("terminalId")]||""}</td>
+            <td class="${getCellClass('gateNumber', row[dataColumnNames.indexOf("gateNumber")]||"")}">${row[dataColumnNames.indexOf("gateNumber")]||""}</td>
+            <td class="${getCellClass('aircraftSubtype', row[dataColumnNames.indexOf("aircraftSubtype")]||"")}">${row[dataColumnNames.indexOf("aircraftSubtype")]||""}</td>
+            <td class="${getCellClass('carousel', row[dataColumnNames.indexOf("carousel")]||"")}">${row[dataColumnNames.indexOf("carousel")]||""}</td>
+            <td class="${getCellClass('exitNumber', row[dataColumnNames.indexOf("exitNumber")]||"")}">${row[dataColumnNames.indexOf("exitNumber")]||""}</td>
+          </tr>
+        `;
+      }).join('');
     }
 
     document.getElementById("refreshBtn").onclick = function() {
@@ -368,6 +504,18 @@
       e.preventDefault();
       renderTable();
     };
+    document.getElementById("filters").onreset = function(e) {
+      // 폼 리셋 후 테이블을 다시 렌더링하도록 딜레이를 줌
+      setTimeout(renderTable, 0); 
+    };
+    document.getElementById("clearHighlightsBtn").onclick = function() {
+        // 현재 표시된 최신 갱신 시각을 사용자의 확인 시점으로 저장
+        const currentLatestUpdateTime = document.getElementById("updated_at").innerText;
+        lastAcknowledgedUpdateTime = toKSTString(currentLatestUpdateTime); // KST 문자열로 변환하여 저장
+        localStorage.setItem('lastAcknowledgedUpdateTime', lastAcknowledgedUpdateTime);
+        renderTable(); // 테이블을 다시 렌더링하여 하이라이트 제거
+    };
+
 
     // 최초 1회 전체조회
     loadDataAndRender();
