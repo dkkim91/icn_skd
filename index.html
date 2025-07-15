@@ -84,7 +84,7 @@
         margin-right: 0; /* 기본 마진 제거 */
         gap: 2px; /* 라벨과 입력 필드 사이 간격 줄임 */
       }
-      .filters input, .filters .filters select {
+      .filters input, .filters select {
         width: 100%; /* 입력 필드가 라벨 너비를 채우도록 */
         max-width: none; /* 최대 너비 제한 해제 */
         box-sizing: border-box; /* 패딩과 보더가 너비에 포함되도록 */
@@ -94,7 +94,7 @@
         max-width: 100px; /* 고정 너비로 더 작게 */
       }
       .filters .btn {
-        width: calc(100% - 10px); /* 버튼이 전체 너비를 사용하도록 */
+        width: calc(50% - 5px); /* 버튼이 한 줄에 두 개씩 표시되도록 */
         padding: 8px 14px; /* 버튼 패딩 늘림 */
         margin-top: 5px; /* 버튼 상단 여백 추가 */
       }
@@ -128,6 +128,9 @@
         th, td {
             font-size: 0.8em; /* 폰트 크기 더 줄임 */
             padding: 2px 0px; /* 패딩 더 줄임 */
+        }
+        .filters .btn {
+          width: calc(50% - 5px); /* 버튼이 한 줄에 두 개씩 표시되도록 */
         }
     }
   </style>
@@ -284,12 +287,25 @@
       document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터를 불러오는 중...</td></tr>`;
       try {
         let res = await fetch(SHEET_JSON_URL + "?" + Date.now());
+        
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error(`HTTP error! status: ${res.status}, content: ${errorText}`);
+            throw new Error(`데이터 로드 실패: HTTP 오류 ${res.status}`);
+        }
+        
         const responseData = await res.json();
+        console.log("Received responseData:", responseData); // *** IMPORTANT DEBUG LOG ***
 
-        // Google Apps Script에서 반환된 데이터 구조에 따라 SKD_DATA와 LAST_CHANGES_FROM_SERVER 설정
+        // Robustness checks for responseData structure
+        if (!responseData || !Array.isArray(responseData.currentData) || !Array.isArray(responseData.columns)) {
+            console.error("Invalid response data structure:", responseData);
+            throw new Error("서버로부터 유효하지 않은 데이터 구조를 받았습니다.");
+        }
+
         SKD_DATA = responseData.currentData;
         LAST_CHANGES_FROM_SERVER = responseData.lastChanges || [];
-        const columns = responseData.columns; // 컬럼 정보도 함께 받아옴
+        const columns = responseData.columns; 
 
         // 터미널 옵션 동적생성
         let terminalSelect = document.getElementById("terminalId");
@@ -358,7 +374,7 @@
         renderTable();
 
       } catch(e) {
-        document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터 로드 오류</td></tr>`;
+        document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터 로드 오류: ${e.message || e}</td></tr>`;
         document.getElementById("updated_at").innerText = "- (오류)";
         console.error("데이터 로드 중 오류 발생:", e);
       }
@@ -453,24 +469,32 @@
         // 이 행이 서버에서 감지된 변경사항에 포함되었는지 찾기
         const changedEntry = LAST_CHANGES_FROM_SERVER.find(change =>
             // flightId, op_type, scheduleDatetime으로 고유한 변경사항 식별
-            safe(change.row[dataColumnNames.indexOf("flightId")]) === safe(rowFlightId) &&
-            safe(change.row[dataColumnNames.indexOf("op_type")]) === safe(rowOpType) &&
-            safe(change.row[dataColumnNames.indexOf("scheduleDatetime")]) === safe(rowScheduleDatetime)
+            String(change.row[dataColumnNames.indexOf("flightId")]) === String(rowFlightId) &&
+            String(change.row[dataColumnNames.indexOf("op_type")]) === String(rowOpType) &&
+            String(change.row[dataColumnNames.indexOf("scheduleDatetime")]) === String(rowScheduleDatetime)
         );
 
         // 특정 필드가 변경되었는지 확인하고 CSS 클래스를 반환하는 헬퍼 함수
-        const getCellClass = (fieldDataName, currentValue) => {
+        const getCellClass = (fieldDataName, rawValue) => {
             // 1. 서버가 감지한 변경사항에 포함되어 있고 (changedEntry가 존재)
             // 2. 해당 변경사항의 updated_at이 사용자의 lastAcknowledgedUpdateTime보다 최신인 경우
             // (즉, 사용자가 아직 확인하지 않은 변경사항인 경우)
             // 3. 그리고 해당 필드가 실제로 변경된 필드 목록 (diff)에 포함되어 있는 경우
             if (changedEntry && changedEntry.diff && new Date(rowUpdatedAt) > new Date(lastAcknowledgedUpdateTime)) {
                 // diff 배열에서 해당 필드의 변경사항을 찾음
-                // d.after 값과 현재 표시될 값이 일치하는지 확인 (정규화된 값 기준)
                 const diffEntry = changedEntry.diff.find(d => d.field === fieldDataName);
-                // 중요: diffEntry.after와 currentValue를 비교하여 실제 값이 일치하는 경우에만 하이라이트
-                // 이는 API에서 받아온 데이터와 화면에 표시되는 데이터의 형식이 다를 수 있기 때문
-                if (diffEntry && safe(diffEntry.after) === safe(currentValue)) {
+                
+                // 중요: diffEntry.after와 rawValue를 비교하여 실제 값이 일치하는 경우에만 하이라이트
+                // diffEntry.after는 이미 정규화된 값 (예: H:MM 또는 원본 문자열)
+                let comparisonValue = rawValue;
+                if (fieldDataName === 's_time' || fieldDataName === 'e_time') {
+                    comparisonValue = toHHMMString(rawValue); // H:MM 형식으로 변환하여 비교
+                } else if (fieldDataName === 'date') {
+                    // date 필드는 YYYYMMDD 원본 형식으로 비교
+                    comparisonValue = String(rawValue); 
+                }
+                
+                if (diffEntry && String(diffEntry.after) === String(comparisonValue)) {
                     return 'changed-field';
                 }
             }
@@ -479,13 +503,13 @@
 
         return `
           <tr>
-            <td class="${getCellClass('date', String(row[dataColumnNames.indexOf("date")]).slice(4,6)+'/'+String(row[dataColumnNames.indexOf("date")]).slice(6,8))}">${String(row[dataColumnNames.indexOf("date")]).slice(4,6)}/${String(row[dataColumnNames.indexOf("date")]).slice(6,8)}</td>
+            <td class="${getCellClass('date', row[dataColumnNames.indexOf("date")]||"")}">${String(row[dataColumnNames.indexOf("date")]).slice(4,6)}/${String(row[dataColumnNames.indexOf("date")]).slice(6,8)}</td>
             <td class="two-line ${getCellClass('kal_oal', row[dataColumnNames.indexOf("kal_oal")]||"")}">${row[dataColumnNames.indexOf("kal_oal")]||""}</td>
             <td class="two-line ${getCellClass('flightId', row[dataColumnNames.indexOf("flightId")]||"")}">${row[dataColumnNames.indexOf("flightId")] ? row[dataColumnNames.indexOf("flightId")].slice(0,2) + '<br>' + row[dataColumnNames.indexOf("flightId")].slice(2) : ""}</td>
             <td class="${getCellClass('sector', row[dataColumnNames.indexOf("sector")]||"")}">${row[dataColumnNames.indexOf("sector")]||""}</td>
             <td class="${getCellClass('op_type', row[dataColumnNames.indexOf("op_type")]||"")}">${row[dataColumnNames.indexOf("op_type")]||""}</td>
-            <td class="${getCellClass('s_time', toHHMMString(row[dataColumnNames.indexOf("s_time")]||""))}">${toHHMMString(row[dataColumnNames.indexOf("s_time")]||"")}</td>
-            <td class="${getCellClass('e_time', toHHMMString(row[dataColumnNames.indexOf("e_time")]||""))}">${toHHMMString(row[dataColumnNames.indexOf("e_time")]||"")}</td>
+            <td class="${getCellClass('s_time', row[dataColumnNames.indexOf("s_time")]||"")}">${toHHMMString(row[dataColumnNames.indexOf("s_time")]||"")}</td>
+            <td class="${getCellClass('e_time', row[dataColumnNames.indexOf("e_time")]||"")}">${toHHMMString(row[dataColumnNames.indexOf("e_time")]||"")}</td>
             <td class="${getCellClass('status', row[dataColumnNames.indexOf("status")]||"")}">${row[dataColumnNames.indexOf("status")]||""}</td>
             <td class="${getCellClass('terminalId', row[dataColumnNames.indexOf("terminalId")]||"")}">${row[dataColumnNames.indexOf("terminalId")]||""}</td>
             <td class="${getCellClass('gateNumber', row[dataColumnNames.indexOf("gateNumber")]||"")}">${row[dataColumnNames.indexOf("gateNumber")]||""}</td>
