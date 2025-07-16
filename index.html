@@ -310,7 +310,7 @@
         let terminalSelect = document.getElementById("terminalId");
         let terminals = [...new Set(SKD_DATA.map(row => row[columns.indexOf("terminalId")]).filter(t => t))].sort();
         terminalSelect.innerHTML = `<option value="">전체</option>` +
-                                   terminals.map(t => `<option value="${t}">${t}</option>`).join('');
+                                       terminals.map(t => `<option value="${t}">${t}</option>`).join('');
         terminalSelect.value = "";
 
         // 시간대 옵션 동적생성
@@ -319,10 +319,10 @@
         if (opsHourColIdx !== -1) {
             let opsHours = [...new Set(SKD_DATA.map(row => row[opsHourColIdx]).filter(h => h !== undefined && h !== null))].sort((a,b) => a-b);
             opsHourSelect.innerHTML = `<option value="">전체</option>` +
-                                      opsHours.map(h => {
-                                        const hourStr = String(h).padStart(2, '0');
-                                        return `<option value="${h}">${hourStr}시</option>`;
-                                      }).join('');
+                                         opsHours.map(h => {
+                                           const hourStr = String(h).padStart(2, '0');
+                                           return `<option value="${h}">${hourStr}시</option>`;
+                                         }).join('');
             opsHourSelect.value = "";
         }
 
@@ -330,21 +330,21 @@
         let gateNumberSelect = document.getElementById("gateNumberFilter");
         let gateNumbers = [...new Set(SKD_DATA.map(row => row[columns.indexOf("gateNumber")]).filter(g => g))].sort((a,b) => String(a).localeCompare(String(b)));
         gateNumberSelect.innerHTML = `<option value="">전체</option>` +
-                                     gateNumbers.map(g => `<option value="${g}">${g}</option>`).join('');
+                                           gateNumbers.map(g => `<option value="${g}">${g}</option>`).join('');
         gateNumberSelect.value = "";
 
         // Carousel 옵션 동적생성
         let carouselSelect = document.getElementById("carouselFilter");
         let carousels = [...new Set(SKD_DATA.map(row => row[columns.indexOf("carousel")]).filter(c => c))].sort((a,b) => String(a).localeCompare(String(b)));
         carouselSelect.innerHTML = `<option value="">전체</option>` +
-                                   carousels.map(c => `<option value="${c}">${c}</option>`).join('');
+                                       carousels.map(c => `<option value="${c}">${c}</option>`).join('');
         carouselSelect.value = "";
 
         // Exit 옵션 동적생성
         let exitNumberSelect = document.getElementById("exitNumberFilter");
         let exitNumbers = [...new Set(SKD_DATA.map(row => row[columns.indexOf("exitNumber")]).filter(e => e))].sort((a,b) => String(a).localeCompare(String(b)));
         exitNumberSelect.innerHTML = `<option value="">전체</option>` +
-                                     exitNumbers.map(e => `<option value="${e}">${e}</option>`).join('');
+                                           exitNumbers.map(e => `<option value="${e}">${e}</option>`).join('');
         exitNumberSelect.value = "";
 
 
@@ -471,7 +471,8 @@
                 if (fieldDataName === 's_time' || fieldDataName === 'e_time') {
                     comparisonValue = toHHMMString(rawValue);
                 } else if (fieldDataName === 'date') {
-                    comparisonValue = String(rawValue);
+                    // For date, ensure we compare the full YYYYMMDD string from the data
+                    comparisonValue = String(rawValue); 
                 }
                 if (diffEntry && String(diffEntry.after) === String(comparisonValue)) {
                     return 'changed-field';
@@ -480,9 +481,17 @@
             return '';
         };
 
+        const dateValue = String(row[dataColumnNames.indexOf("date")] || "");
+        let formattedDate = "";
+        if (dateValue.length === 8) { // Assuming YYYYMMDD format
+            formattedDate = `${dateValue.slice(4, 6)}/${dateValue.slice(6, 8)}`;
+        } else {
+            formattedDate = dateValue; // Use as is if not YYYYMMDD
+        }
+
         return `
           <tr>
-            <td class="${getCellClass('date', row[dataColumnNames.indexOf("date")]||"")}">${String(row[dataColumnNames.indexOf("date")]||"").slice(4,6)}/${String(row[dataColumnNames.indexOf("date")]||"").slice(6,8)}</td>
+            <td class="${getCellClass('date', row[dataColumnNames.indexOf("date")]||"")}">${formattedDate}</td>
             <td class="two-line ${getCellClass('kal_oal', row[dataColumnNames.indexOf("kal_oal")]||"")}">${row[dataColumnNames.indexOf("kal_oal")]||""}</td>
             <td class="two-line ${getCellClass('flightId', row[dataColumnNames.indexOf("flightId")]||"")}">${row[dataColumnNames.indexOf("flightId")] ? row[dataColumnNames.indexOf("flightId")].slice(0,2) + '<br>' + row[dataColumnNames.indexOf("flightId")].slice(2) : ""}</td>
             <td class="${getCellClass('sector', row[dataColumnNames.indexOf("sector")]||"")}">${row[dataColumnNames.indexOf("sector")]||""}</td>
@@ -491,7 +500,6 @@
             <td class="${getCellClass('e_time', row[dataColumnNames.indexOf("e_time")]||"")}">${toHHMMString(row[dataColumnNames.indexOf("e_time")]||"")}</td>
             <td class="${getCellClass('status', row[dataColumnNames.indexOf("status")]||"")}">${row[dataColumnNames.indexOf("status")]||""}</td>
             <td class="${getCellClass('terminalId', row[dataColumnNames.indexOf("terminalId")]||"")}">${row[dataColumnNames.indexOf("terminalId")]||""}</td>
-            {/* ▼▼▼ FIX: 여기서 발생한 오타를 수정했습니다. getColumnIndex -> indexOf ▼▼▼ */}
             <td class="${getCellClass('gateNumber', row[dataColumnNames.indexOf("gateNumber")]||"")}">${row[dataColumnNames.indexOf("gateNumber")]||""}</td>
             <td class="${getCellClass('aircraftSubtype', row[dataColumnNames.indexOf("aircraftSubtype")]||"")}">${row[dataColumnNames.indexOf("aircraftSubtype")]||""}</td>
             <td class="${getCellClass('carousel', row[dataColumnNames.indexOf("carousel")]||"")}">${row[dataColumnNames.indexOf("carousel")]||""}</td>
