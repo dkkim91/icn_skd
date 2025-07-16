@@ -9,39 +9,14 @@
     .container { max-width: 1100px; margin: 18px auto; background: #fff; border-radius: 18px; box-shadow: 0 2px 16px #bbb; padding: 18px; }
     h2 { text-align: center; margin-bottom: 14px; color: #2563eb; letter-spacing:-1px;}
     .info { text-align: center; font-size: 1.02em; color: #333; margin-bottom: 10px; }
-    /* 필터 섹션 스타일 */
     .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 8px 0 16px 0;
-      justify-content: center;
-      padding: 0 5px; /* 모바일에서 좌우 여백 추가 */
+      display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px 0; justify-content: center; padding: 0 5px;
     }
-    .filters label {
-      font-size:1.02em;
-      margin-right:5px;
-      display: flex; /* 라벨과 입력 필드를 한 줄에 정렬 */
-      align-items: center; /* 세로 중앙 정렬 */
-      white-space: nowrap; /* 라벨이 줄바꿈되지 않도록 */
-    }
+    .filters label { font-size:1.02em; margin-right:5px; display: flex; align-items: center; white-space: nowrap; }
     .filters input, .filters select {
-      padding:4px 10px;
-      font-size:1em;
-      border:1px solid #ccc;
-      border-radius: 5px;
-      flex-grow: 1; /* 입력 필드가 가능한 공간을 채우도록 */
-      min-width: 80px; /* 최소 너비 설정 */
+      padding:4px 10px; font-size:1em; border:1px solid #ccc; border-radius: 5px; flex-grow: 1; min-width: 80px;
     }
-    .filters .btn {
-      background:#2563eb;
-      color:#fff;
-      border:none;
-      padding:4px 14px;
-      border-radius:6px;
-      cursor:pointer;
-      flex-shrink: 0; /* 버튼이 줄어들지 않도록 */
-    }
+    .filters .btn { background:#2563eb; color:#fff; border:none; padding:4px 14px; border-radius:6px; cursor:pointer; flex-shrink: 0; }
     table { width:100%; border-collapse:collapse; margin-top: 6px; }
     th,td { padding:6px 3px; border-bottom:1px solid #e2e2e2; font-size:0.99em; text-align:center;}
     th { background:#f2f5fa; color:#2563eb; }
@@ -49,89 +24,29 @@
     #rowCount { font-weight:bold; margin:10px 0 0 2px; text-align:right;}
     #refreshBtn { margin-left:10px; background:#e1e8ff; color:#222; border:1px solid #7ca5ea; border-radius:6px; padding:3px 9px; cursor:pointer; }
     #clearHighlightsBtn {
-      margin-left:5px;
-      background:#f0f0f0;
-      color:#555;
-      border:1px solid #ccc;
-      border-radius:6px;
-      padding:3px 9px;
-      cursor:pointer;
-      font-size:0.9em;
+      margin-left:5px; background:#f0f0f0; color:#555; border:1px solid #ccc; border-radius:6px;
+      padding:3px 9px; cursor:pointer; font-size:0.9em;
     }
-
-    /* 변경된 항목에 노란색 배경 */
-    .changed-field {
-      background-color: #FFFF00 !important; /* 노란색 배경 */
-      transition: background-color 0.5s ease; /* 부드러운 전환 효과 */
-    }
-
-    /* 모바일 최적화 */
+    .changed-field { background-color: #FFFF00 !important; transition: background-color 0.5s ease; }
     @media (max-width:900px) {
       .container { padding:8px;}
-      table, thead, tbody, th, td, tr { font-size:0.9em; } /* 모바일에서 폰트 크기 약간 줄임 */
-      #rowCount { text-align:center; margin-top: 5px; } /* 모바일에서 중앙 정렬 및 여백 조정 */
-      .filters {
-        flex-direction: row; /* 필터 항목을 가로로 배치 */
-        justify-content: space-between; /* 항목들을 양 끝으로 정렬 */
-        align-items: flex-start; /* 상단 정렬 */
-        gap: 10px; /* 가로 간격 조정 */
-        padding: 0 5px; /* 모바일에서 좌우 여백 조정 */
-      }
-      .filters label {
-        flex-direction: column; /* 라벨과 입력 필드를 세로로 쌓음 */
-        align-items: flex-start; /* 왼쪽 정렬 */
-        width: calc(50% - 5px); /* 한 줄에 2개씩 표시 (gap 고려) */
-        margin-right: 0; /* 기본 마진 제거 */
-        gap: 2px; /* 라벨과 입력 필드 사이 간격 줄임 */
-      }
-      .filters input, .filters select {
-        width: 100%; /* 입력 필드가 라벨 너비를 채우도록 */
-        max-width: none; /* 최대 너비 제한 해제 */
-        box-sizing: border-box; /* 패딩과 보더가 너비에 포함되도록 */
-      }
-      .filters #flightId, .filters #sector { /* 편명과 구간 입력 박스 크기 줄임 */
-        width: 100%;
-        max-width: 100px; /* 고정 너비로 더 작게 */
-      }
-      .filters .btn {
-        width: calc(50% - 5px); /* 버튼이 한 줄에 두 개씩 표시되도록 */
-        padding: 8px 14px; /* 버튼 패딩 늘림 */
-        margin-top: 5px; /* 버튼 상단 여백 추가 */
-      }
-      /* 테이블 스크롤바가 항상 보이도록 설정 */
-      div[style="overflow-x:auto;"] {
-        -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 */
-      }
-      /* 테이블 셀의 패딩을 줄여 더 많은 내용을 표시 */
-      th, td {
-        padding: 4px 1px; /* 패딩 더 줄임 */
-        font-size: 0.85em; /* 폰트 크기 더 줄임 */
-      }
-      /* 특정 헤더 및 셀의 텍스트 줄바꿈 허용 */
-      th.two-line, td.two-line {
-        white-space: normal; /* 줄바꿈 허용 */
-        line-height: 1.2; /* 줄 간격 조정 */
-      }
-      th.two-line {
-        padding: 4px 1px; /* 헤더 패딩 조정 */
-      }
+      table, thead, tbody, th, td, tr { font-size:0.9em; }
+      #rowCount { text-align:center; margin-top: 5px; }
+      .filters { flex-direction: row; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 0 5px; }
+      .filters label { flex-direction: column; align-items: flex-start; width: calc(50% - 5px); margin-right: 0; gap: 2px; }
+      .filters input, .filters select { width: 100%; max-width: none; box-sizing: border-box; }
+      .filters #flightId, .filters #sector { width: 100%; max-width: 100px; }
+      .filters .btn { width: calc(50% - 5px); padding: 8px 14px; margin-top: 5px; }
+      div[style="overflow-x:auto;"] { -webkit-overflow-scrolling: touch; }
+      th, td { padding: 4px 1px; font-size: 0.85em; }
+      th.two-line, td.two-line { white-space: normal; line-height: 1.2; }
+      th.two-line { padding: 4px 1px; }
     }
-
-    /* 더 작은 모바일 기기 (예: 480px 이하) */
     @media (max-width:480px) {
-        .filters label {
-            width: calc(50% - 5px); /* 여전히 한 줄에 2개 */
-        }
-        .filters #flightId, .filters #sector {
-            max-width: 80px; /* 더 작은 화면에서 편명/구간 입력 박스 더 줄임 */
-        }
-        th, td {
-            font-size: 0.8em; /* 폰트 크기 더 줄임 */
-            padding: 2px 0px; /* 패딩 더 줄임 */
-        }
-        .filters .btn {
-          width: calc(50% - 5px); /* 버튼이 한 줄에 두 개씩 표시되도록 */
-        }
+        .filters label { width: calc(50% - 5px); }
+        .filters #flightId, .filters #sector { max-width: 80px; }
+        th, td { font-size: 0.8em; padding: 2px 0px; }
+        .filters .btn { width: calc(50% - 5px); }
     }
   </style>
 </head>
@@ -160,7 +75,7 @@
       <label>시간대
         <select id="opsHourFilter">
           <option value="">전체</option>
-          </select>
+        </select>
       </label>
       <label>출도착
         <select id="op_type">
@@ -227,17 +142,13 @@
     </div>
   </div>
   <script>
-    // Google Apps Script 웹 앱 URL (doGet 함수가 배포된 URL)
     const SHEET_JSON_URL = "https://script.google.com/macros/s/AKfycbyDlsW221wLAkj94doftMXsBgHIDgyIGxT_arxOyjy2EJf9HIQUe7KNgH7o9reA-W0q8A/exec";
-    let SKD_DATA = []; // 현재 시트 데이터
-    let LAST_CHANGES_FROM_SERVER = []; // 서버가 마지막으로 감지한 변경사항 (전역)
-    let lastAcknowledgedUpdateTime = localStorage.getItem('lastAcknowledgedUpdateTime') || ''; // 사용자별 마지막 확인 시점
+    let SKD_DATA = [];
+    let LAST_CHANGES_FROM_SERVER = [];
+    let lastAcknowledgedUpdateTime = localStorage.getItem('lastAcknowledgedUpdateTime') || '';
 
-    // --- 시간 변환 함수 (UTC ISO 문자열을 브라우저의 로컬 시간대(KST)로 변환) ---
     function toKSTString(dtstr) {
-      if (!dtstr) {
-        return "";
-      }
+      if (!dtstr) { return ""; }
       try {
         const dateObj = new Date(dtstr);
         if (!isNaN(dateObj.getTime()) && dtstr.endsWith('Z')) {
@@ -249,71 +160,46 @@
           const ss = String(dateObj.getSeconds()).padStart(2, '0');
           return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
         }
-      } catch (e) {
-        console.error("Date parsing error:", e);
-      }
+      } catch (e) { }
       const kstFormatRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
-      if (kstFormatRegex.test(dtstr)) {
-        return dtstr;
-      }
+      if (kstFormatRegex.test(dtstr)) return dtstr;
       return dtstr;
     }
-
-    // --- 시간 변환 함수 (API에서 받은 시간 문자열을 HH:mm 형식으로 변환) ---
     function toHHMMString(dtstr) {
-      if (!dtstr) {
-        return "";
-      }
-      // 이미 H:MM 형식인 경우 그대로 반환
-      if (typeof dtstr === 'string' && dtstr.match(/^\d{1,2}:\d{2}$/)) {
-          return dtstr;
-      }
+      if (!dtstr) return "";
+      if (typeof dtstr === 'string' && dtstr.match(/^\d{1,2}:\d{2}$/)) return dtstr;
       try {
-        const dateObj = new Date(dtstr); // ISO 또는 다른 날짜/시간 문자열 파싱 시도
+        const dateObj = new Date(dtstr);
         if (!isNaN(dateObj.getTime())) {
           const HH = String(dateObj.getHours()).padStart(2, '0');
           const mm = String(dateObj.getMinutes()).padStart(2, '0');
           return `${HH}:${mm}`;
         }
-      } catch (e) {
-        console.error("Time parsing error for HH:mm:", e);
-      }
-      return ""; // 파싱 실패 시 빈 문자열 반환
+      } catch (e) {}
+      return "";
     }
-    // --- 시간 변환 함수 끝 ---
 
     async function loadDataAndRender() {
       document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터를 불러오는 중...</td></tr>`;
       try {
         let res = await fetch(SHEET_JSON_URL + "?" + Date.now());
-
         if (!res.ok) {
             const errorText = await res.text();
-            console.error(`HTTP error! status: ${res.status}, content: ${errorText}`);
             throw new Error(`데이터 로드 실패: HTTP 오류 ${res.status}`);
         }
-
         const responseData = await res.json();
-        console.log("Received responseData:", responseData); // *** IMPORTANT DEBUG LOG ***
-
-        // Robustness checks for responseData structure
         if (!responseData || !Array.isArray(responseData.currentData) || !Array.isArray(responseData.columns)) {
-            console.error("Invalid response data structure:", responseData);
             throw new Error("서버로부터 유효하지 않은 데이터 구조를 받았습니다.");
         }
-
         SKD_DATA = responseData.currentData;
         LAST_CHANGES_FROM_SERVER = responseData.lastChanges || [];
         const columns = responseData.columns;
 
-        // 터미널 옵션 동적생성
         let terminalSelect = document.getElementById("terminalId");
         let terminals = [...new Set(SKD_DATA.map(row => row[columns.indexOf("terminalId")]).filter(t => t))].sort();
-        terminalSelect.innerHTML = `<option value="">전체</option>` +
-                                       terminals.map(t => `<option value="${t}">${t}</option>`).join('');
+        terminalSelect.innerHTML = `<option value="">전체</option>` + terminals.map(t => `<option value="${t}">${t}</option>`).join('');
         terminalSelect.value = "";
 
-        // 시간대 옵션 동적생성
         let opsHourSelect = document.getElementById("opsHourFilter");
         const opsHourColIdx = columns.indexOf("ops_hour");
         if (opsHourColIdx !== -1) {
@@ -326,53 +212,41 @@
             opsHourSelect.value = "";
         }
 
-        // 게이트 옵션 동적생성
         let gateNumberSelect = document.getElementById("gateNumberFilter");
         let gateNumbers = [...new Set(SKD_DATA.map(row => row[columns.indexOf("gateNumber")]).filter(g => g))].sort((a,b) => String(a).localeCompare(String(b)));
         gateNumberSelect.innerHTML = `<option value="">전체</option>` +
                                            gateNumbers.map(g => `<option value="${g}">${g}</option>`).join('');
         gateNumberSelect.value = "";
 
-        // Carousel 옵션 동적생성
         let carouselSelect = document.getElementById("carouselFilter");
         let carousels = [...new Set(SKD_DATA.map(row => row[columns.indexOf("carousel")]).filter(c => c))].sort((a,b) => String(a).localeCompare(String(b)));
         carouselSelect.innerHTML = `<option value="">전체</option>` +
                                        carousels.map(c => `<option value="${c}">${c}</option>`).join('');
         carouselSelect.value = "";
 
-        // Exit 옵션 동적생성
         let exitNumberSelect = document.getElementById("exitNumberFilter");
         let exitNumbers = [...new Set(SKD_DATA.map(row => row[columns.indexOf("exitNumber")]).filter(e => e))].sort((a,b) => String(a).localeCompare(String(b)));
         exitNumberSelect.innerHTML = `<option value="">전체</option>` +
                                            exitNumbers.map(e => `<option value="${e}">${e}</option>`).join('');
         exitNumberSelect.value = "";
 
-
-        // 최신 updated_at 구하기
         let latestUpdatedAt = "";
         if (SKD_DATA.length > 0) {
           const updatedAtColIdx = columns.indexOf("updated_at");
           if (updatedAtColIdx !== -1) {
-            let sorted = SKD_DATA
-              .filter(r => r[updatedAtColIdx])
-              .sort((a, b) => (a[updatedAtColIdx] < b[updatedAtColIdx] ? 1 : -1));
+            let sorted = SKD_DATA.filter(r => r[updatedAtColIdx]).sort((a, b) => (a[updatedAtColIdx] < b[updatedAtColIdx] ? 1 : -1));
             latestUpdatedAt = sorted.length > 0 ? sorted[0][updatedAtColIdx] : "";
           }
         }
-
         document.getElementById("updated_at").innerText = toKSTString(latestUpdatedAt) || "-";
-
         if (!lastAcknowledgedUpdateTime) {
             lastAcknowledgedUpdateTime = latestUpdatedAt;
             localStorage.setItem('lastAcknowledgedUpdateTime', lastAcknowledgedUpdateTime);
         }
-
         renderTable();
-
       } catch(e) {
         document.getElementById("skd-tbody").innerHTML = `<tr><td colspan="13">데이터 로드 오류: ${e.message || e}</td></tr>`;
         document.getElementById("updated_at").innerText = "- (오류)";
-        console.error("데이터 로드 중 오류 발생:", e);
       }
     }
 
@@ -387,7 +261,6 @@
           const dataCols = ["date", "kal_oal", "airline", "flightId", "sector", "op_type", "passengerOrCargo",
                             "typeOfFlight", "ops_hour", "scheduleDatetime", "estimatedDatetime", "s_time", "e_time",
                             "difftime", "status", "terminalId", "chkinRange", "gateNumber", "aircraftSubtype", "carousel", "exitNumber", "updated_at"];
-
           switch(colName) {
               case "출발일": return dataCols.indexOf("date");
               case "KAL/OAL": return dataCols.indexOf("kal_oal");
@@ -407,39 +280,39 @@
               default: return -1;
           }
       };
-
-      let filtered = SKD_DATA.filter(row => {
-        const kalOalIdx = getColumnIndex("KAL/OAL");
-        const flightIdIdx = getColumnIndex("편명");
-        const opsHourIdx = getColumnIndex("ops_hour");
-        const opTypeIdx = getColumnIndex("출도착");
-        const statusIdx = getColumnIndex("상태");
-        const terminalIdIdx = getColumnIndex("터미널");
-        const gateNumberIdx = getColumnIndex("게이트");
-        const carouselIdx = getColumnIndex("Carousel");
-        const exitNumberIdx = getColumnIndex("Exit");
-        const airlineIdx = getColumnIndex("airline");
-
-        if (f.kal_oal && row[kalOalIdx] != f.kal_oal) return false;
-
-        if (f.airlineCodeFilter) {
-            const filterCode = f.airlineCodeFilter.toUpperCase();
-            if (!row[flightIdIdx] || (!String(row[flightIdIdx]).startsWith(filterCode) && (!row[airlineIdx] || !String(row[airlineIdx]).includes(filterCode)))) {
-                return false;
-            }
-        }
-        if (f.flightId && (!row[flightIdIdx] || String(row[flightIdIdx]).indexOf(f.flightId) === -1)) return false;
-
-        if (f.opsHourFilter && row[opsHourIdx] != parseInt(f.opsHourFilter, 10)) return false;
-
-        if (f.op_type && row[opTypeIdx] != f.op_type) return false;
-        if (f.status && row[statusIdx] != f.status) return false;
-        if (f.terminalId && row[terminalIdIdx] != f.terminalId) return false;
-        if (f.gateNumberFilter && (!row[gateNumberIdx] || String(row[gateNumberIdx]) != f.gateNumberFilter)) return false;
-        if (f.carouselFilter && (!row[carouselIdx] || String(row[carouselIdx]) != f.carouselFilter)) return false;
-        if (f.exitNumberFilter && (!row[exitNumberIdx] || String(row[exitNumberIdx]) != f.exitNumberFilter)) return false;
-        return true;
-      });
+      const dateIdx = getColumnIndex("출발일");
+      let filtered = SKD_DATA
+        .filter(row => {
+          if (!row || (typeof row[dateIdx] !== "number" && typeof row[dateIdx] !== "string")) return false;
+          const dateStr = String(row[dateIdx]);
+          if (!/^\d{8}$/.test(dateStr)) return false;
+          const kalOalIdx = getColumnIndex("KAL/OAL");
+          const flightIdIdx = getColumnIndex("편명");
+          const opsHourIdx = getColumnIndex("ops_hour");
+          const opTypeIdx = getColumnIndex("출도착");
+          const statusIdx = getColumnIndex("상태");
+          const terminalIdIdx = getColumnIndex("터미널");
+          const gateNumberIdx = getColumnIndex("게이트");
+          const carouselIdx = getColumnIndex("Carousel");
+          const exitNumberIdx = getColumnIndex("Exit");
+          const airlineIdx = getColumnIndex("airline");
+          if (f.kal_oal && row[kalOalIdx] != f.kal_oal) return false;
+          if (f.airlineCodeFilter) {
+              const filterCode = f.airlineCodeFilter.toUpperCase();
+              if (!row[flightIdIdx] || (!String(row[flightIdIdx]).startsWith(filterCode) && (!row[airlineIdx] || !String(row[airlineIdx]).includes(filterCode)))) {
+                  return false;
+              }
+          }
+          if (f.flightId && (!row[flightIdIdx] || String(row[flightIdIdx]).indexOf(f.flightId) === -1)) return false;
+          if (f.opsHourFilter && row[opsHourIdx] != parseInt(f.opsHourFilter, 10)) return false;
+          if (f.op_type && row[opTypeIdx] != f.op_type) return false;
+          if (f.status && row[statusIdx] != f.status) return false;
+          if (f.terminalId && row[terminalIdIdx] != f.terminalId) return false;
+          if (f.gateNumberFilter && (!row[gateNumberIdx] || String(row[gateNumberIdx]) != f.gateNumberFilter)) return false;
+          if (f.carouselFilter && (!row[carouselIdx] || String(row[carouselIdx]) != f.carouselFilter)) return false;
+          if (f.exitNumberFilter && (!row[exitNumberIdx] || String(row[exitNumberIdx]) != f.exitNumberFilter)) return false;
+          return true;
+        });
 
       document.getElementById("rowCount").innerText = `총 ${filtered.length}건`;
 
@@ -451,19 +324,16 @@
       const dataColumnNames = ["date", "kal_oal", "airline", "flightId", "sector", "op_type", "passengerOrCargo",
                                "typeOfFlight", "ops_hour", "scheduleDatetime", "estimatedDatetime", "s_time", "e_time",
                                "difftime", "status", "terminalId", "chkinRange", "gateNumber", "aircraftSubtype", "carousel", "exitNumber", "updated_at"];
-
       tbody.innerHTML = filtered.map(row => {
         const rowFlightId = row[dataColumnNames.indexOf("flightId")];
         const rowOpType = row[dataColumnNames.indexOf("op_type")];
         const rowScheduleDatetime = row[dataColumnNames.indexOf("scheduleDatetime")];
         const rowUpdatedAt = row[dataColumnNames.indexOf("updated_at")];
-
         const changedEntry = LAST_CHANGES_FROM_SERVER.find(change =>
             String(change.row[dataColumnNames.indexOf("flightId")]) === String(rowFlightId) &&
             String(change.row[dataColumnNames.indexOf("op_type")]) === String(rowOpType) &&
             String(change.row[dataColumnNames.indexOf("scheduleDatetime")]) === String(rowScheduleDatetime)
         );
-
         const getCellClass = (fieldDataName, rawValue) => {
             if (changedEntry && changedEntry.diff && new Date(rowUpdatedAt) > new Date(lastAcknowledgedUpdateTime)) {
                 const diffEntry = changedEntry.diff.find(d => d.field === fieldDataName);
@@ -471,8 +341,7 @@
                 if (fieldDataName === 's_time' || fieldDataName === 'e_time') {
                     comparisonValue = toHHMMString(rawValue);
                 } else if (fieldDataName === 'date') {
-                    // For date, ensure we compare the full YYYYMMDD string from the data
-                    comparisonValue = String(rawValue); 
+                    comparisonValue = String(rawValue);
                 }
                 if (diffEntry && String(diffEntry.after) === String(comparisonValue)) {
                     return 'changed-field';
@@ -480,15 +349,10 @@
             }
             return '';
         };
-
         const dateValue = String(row[dataColumnNames.indexOf("date")] || "");
         let formattedDate = "";
-        if (dateValue.length === 8) { // Assuming YYYYMMDD format
-            formattedDate = `${dateValue.slice(4, 6)}/${dateValue.slice(6, 8)}`;
-        } else {
-            formattedDate = dateValue; // Use as is if not YYYYMMDD
-        }
-
+        if (dateValue.length === 8) { formattedDate = `${dateValue.slice(4, 6)}/${dateValue.slice(6, 8)}`; }
+        else { formattedDate = dateValue; }
         return `
           <tr>
             <td class="${getCellClass('date', row[dataColumnNames.indexOf("date")]||"")}">${formattedDate}</td>
@@ -509,23 +373,15 @@
       }).join('');
     }
 
-    document.getElementById("refreshBtn").onclick = function() {
-      loadDataAndRender();
-    };
-    document.getElementById("filters").onsubmit = function(e) {
-      e.preventDefault();
-      renderTable();
-    };
-    document.getElementById("filters").onreset = function(e) {
-      setTimeout(renderTable, 0);
-    };
+    document.getElementById("refreshBtn").onclick = function() { loadDataAndRender(); };
+    document.getElementById("filters").onsubmit = function(e) { e.preventDefault(); renderTable(); };
+    document.getElementById("filters").onreset = function(e) { setTimeout(renderTable, 0); };
     document.getElementById("clearHighlightsBtn").onclick = function() {
         const currentLatestUpdateTime = document.getElementById("updated_at").innerText;
         lastAcknowledgedUpdateTime = toKSTString(currentLatestUpdateTime);
         localStorage.setItem('lastAcknowledgedUpdateTime', lastAcknowledgedUpdateTime);
         renderTable();
     };
-
     loadDataAndRender();
   </script>
 </body>
