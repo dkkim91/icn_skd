@@ -313,8 +313,7 @@
                                    terminals.map(t => `<option value="${t}">${t}</option>`).join('');
         terminalSelect.value = "";
 
-        // ▼▼▼ FIX 1: 시간대 옵션 표시 문제를 수정합니다. ▼▼▼
-        // 시간대 옵션을 '10시-11시'가 아닌 '10시' 형태로 표시하도록 수정합니다.
+        // 시간대 옵션 동적생성
         let opsHourSelect = document.getElementById("opsHourFilter");
         const opsHourColIdx = columns.indexOf("ops_hour");
         if (opsHourColIdx !== -1) {
@@ -326,7 +325,6 @@
                                       }).join('');
             opsHourSelect.value = "";
         }
-        // ▲▲▲ FIX 1 END ▲▲▲
 
         // 게이트 옵션 동적생성
         let gateNumberSelect = document.getElementById("gateNumberFilter");
@@ -385,8 +383,6 @@
         f[id] = document.getElementById(id).value.trim();
       });
 
-      // ▼▼▼ FIX 2: 필터링 로직 문제를 수정합니다. ▼▼▼
-      // getColumnIndex 함수에 'ops_hour'와 'airline'을 추가하여 필터가 정상 작동하도록 합니다.
       const getColumnIndex = (colName) => {
           const dataCols = ["date", "kal_oal", "airline", "flightId", "sector", "op_type", "passengerOrCargo",
                             "typeOfFlight", "ops_hour", "scheduleDatetime", "estimatedDatetime", "s_time", "e_time",
@@ -406,17 +402,16 @@
               case "기종": return dataCols.indexOf("aircraftSubtype");
               case "Carousel": return dataCols.indexOf("carousel");
               case "Exit": return dataCols.indexOf("exitNumber");
-              case "ops_hour": return dataCols.indexOf("ops_hour"); // 이 부분이 누락되어 필터가 작동하지 않았습니다.
-              case "airline": return dataCols.indexOf("airline"); // 항공사 필터를 위해 추가합니다.
+              case "ops_hour": return dataCols.indexOf("ops_hour");
+              case "airline": return dataCols.indexOf("airline");
               default: return -1;
           }
       };
-      // ▲▲▲ FIX 2 END ▲▲▲
 
       let filtered = SKD_DATA.filter(row => {
         const kalOalIdx = getColumnIndex("KAL/OAL");
         const flightIdIdx = getColumnIndex("편명");
-        const opsHourIdx = getColumnIndex("ops_hour"); // 이제 정상적으로 인덱스를 가져옵니다.
+        const opsHourIdx = getColumnIndex("ops_hour");
         const opTypeIdx = getColumnIndex("출도착");
         const statusIdx = getColumnIndex("상태");
         const terminalIdIdx = getColumnIndex("터미널");
@@ -435,7 +430,6 @@
         }
         if (f.flightId && (!row[flightIdIdx] || String(row[flightIdIdx]).indexOf(f.flightId) === -1)) return false;
 
-        // 필터링 조건을 숫자형으로 비교하여 정확도를 높입니다.
         if (f.opsHourFilter && row[opsHourIdx] != parseInt(f.opsHourFilter, 10)) return false;
 
         if (f.op_type && row[opTypeIdx] != f.op_type) return false;
@@ -497,7 +491,8 @@
             <td class="${getCellClass('e_time', row[dataColumnNames.indexOf("e_time")]||"")}">${toHHMMString(row[dataColumnNames.indexOf("e_time")]||"")}</td>
             <td class="${getCellClass('status', row[dataColumnNames.indexOf("status")]||"")}">${row[dataColumnNames.indexOf("status")]||""}</td>
             <td class="${getCellClass('terminalId', row[dataColumnNames.indexOf("terminalId")]||"")}">${row[dataColumnNames.indexOf("terminalId")]||""}</td>
-            <td class="${getCellClass('gateNumber', row[dataColumnNames.indexOf("gateNumber")]||"")}">${row[dataColumnNames.getColumnIndex("gateNumber")]||""}</td>
+            {/* ▼▼▼ FIX: 여기서 발생한 오타를 수정했습니다. getColumnIndex -> indexOf ▼▼▼ */}
+            <td class="${getCellClass('gateNumber', row[dataColumnNames.indexOf("gateNumber")]||"")}">${row[dataColumnNames.indexOf("gateNumber")]||""}</td>
             <td class="${getCellClass('aircraftSubtype', row[dataColumnNames.indexOf("aircraftSubtype")]||"")}">${row[dataColumnNames.indexOf("aircraftSubtype")]||""}</td>
             <td class="${getCellClass('carousel', row[dataColumnNames.indexOf("carousel")]||"")}">${row[dataColumnNames.indexOf("carousel")]||""}</td>
             <td class="${getCellClass('exitNumber', row[dataColumnNames.indexOf("exitNumber")]||"")}">${row[dataColumnNames.indexOf("exitNumber")]||""}</td>
