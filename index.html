@@ -319,7 +319,7 @@
         opsHourSelect.innerHTML = `<option value="">전체</option>` + 
                                   opsHours.map(h => {
                                     const hourStr = String(h).padStart(2, '0');
-                                    // ★★★ 이 부분이 수정되었습니다. "XX시"로 표시 ★★★
+                                    // "XX시"로 표시
                                     return `<option value="${h}">${hourStr}시</option>`;
                                   }).join('');
         opsHourSelect.value = "";
@@ -435,7 +435,7 @@
         }
         if (f.flightId && (!row[flightIdIdx] || String(row[flightIdIdx]).indexOf(f.flightId) === -1)) return false;
         
-        // ★★★ 이 부분이 수정되었습니다. 필터링 로직 강화 ★★★
+        // 시간대 필터링 로직
         if (f.opsHourFilter) { // opsHourFilter가 설정된 경우에만 필터링 적용
             const filterHour = parseInt(f.opsHourFilter);
             const rowHour = parseInt(row[opsHourIdx]);
@@ -511,17 +511,17 @@
           <tr>
             <td class="${getCellClass('date', row[dataColumnNames.indexOf("date")]||"")}">${String(row[dataColumnNames.indexOf("date")]).slice(4,6)}/${String(row[dataColumnNames.indexOf("date")]).slice(6,8)}</td>
             <td class="two-line ${getCellClass('kal_oal', row[dataColumnNames.indexOf("kal_oal")]||"")}">${row[dataColumnNames.indexOf("kal_oal")]||""}</td>
-            <td class="two-line ${getCellClass('flightId', row[dataColumnNames.indexOf("flightId")]||"")}">${row[dataColumnNames.indexOf("flightId")] ? row[dataColumnNames.indexOf("flightId").slice(0,2)] + '<br>' + row[dataColumnNames.indexOf("flightId")].slice(2) : ""}</td>
+            <td class="two-line ${getCellClass('flightId', row[dataColumnNames.indexOf("flightId")]||"")}">${row[dataColumnNames.indexOf("flightId")] ? String(row[dataColumnNames.indexOf("flightId")]).slice(0,2) + '<br>' + String(row[dataColumnNames.indexOf("flightId")]).slice(2) : ""}</td>
             <td class="${getCellClass('sector', row[dataColumnNames.indexOf("sector")]||"")}">${row[dataColumnNames.indexOf("sector")]||""}</td>
             <td class="${getCellClass('op_type', row[dataColumnNames.indexOf("op_type")]||"")}">${row[dataColumnNames.indexOf("op_type")]||""}</td>
             <td class="${getCellClass('s_time', row[dataColumnNames.indexOf("s_time")]||"")}">${toHHMMString(row[dataColumnNames.indexOf("s_time")]||"")}</td>
-            <td class="${getCellClass('e_time', row[dataColumnNames.indexOf("e_time")]||"")}">${toHHMMString(row[dataColumnNames.indexOf("e_time")]||"")}</td>
+            <td class="${getCellClass('e_time', row[dataColumnNames.indexOf("e_time")]||\"\")}">${toHHMMString(row[dataColumnNames.indexOf("e_time")]||"")}</td>
             <td class="${getCellClass('status', row[dataColumnNames.indexOf("status")]||"")}">${row[dataColumnNames.indexOf("status")]||""}</td>
             <td class="${getCellClass('terminalId', row[dataColumnNames.indexOf("terminalId")]||"")}">${row[dataColumnNames.indexOf("terminalId")]||""}</td>
-            <td class="${getCellClass('gateNumber', row[dataColumnNames.indexOf("gateNumber")]||"")}">${row[dataColumnNames.indexOf("gateNumber")]||""}</td>
-            <td class="${getCellClass('aircraftSubtype', row[dataColumnNames.indexOf("aircraftSubtype")]||"")}">${row[dataColumnNames.indexOf("aircraftSubtype")]||""}</td>
-            <td class="${getCellClass('carousel', row[dataColumnNames.indexOf("carousel")]||"")}">${row[dataColumnNames.indexOf("carousel")]||""}</td>
-            <td class="${getCellClass('exitNumber', row[dataColumnNames.indexOf("exitNumber")]||"")}">${row[dataColumnNames.indexOf("exitNumber")]||""}</td>
+            <td class="${getCellClass('gateNumber', row[dataColumnNames.indexOf("gateNumber")]||\"\")}">${row[dataColumnNames.indexOf("gateNumber")]||""}</td>
+            <td class="${getCellClass('aircraftSubtype', row[dataColumnNames.indexOf("aircraftSubtype")]||\"\")}">${row[dataColumnNames.indexOf("aircraftSubtype")]||""}</td>
+            <td class="${getCellClass('carousel', row[dataColumnNames.indexOf("carousel")]||\"\")}">${row[dataColumnNames.indexOf("carousel")]||""}</td>
+            <td class="${getCellClass('exitNumber', row[dataColumnNames.indexOf("exitNumber")]||\"\")}">${row[dataColumnNames.indexOf("exitNumber")]||""}</td>
           </tr>
         `;
       }).join('');
