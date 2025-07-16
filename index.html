@@ -160,8 +160,7 @@
       <label>시간대
         <select id="opsHourFilter">
           <option value="">전체</option>
-          <!-- 시간대 옵션은 JavaScript에서 동적으로 추가됩니다 -->
-        </select>
+          </select>
       </label>
       <label>출도착
         <select id="op_type">
@@ -229,7 +228,7 @@
   </div>
   <script>
     // Google Apps Script 웹 앱 URL (doGet 함수가 배포된 URL)
-    const SHEET_JSON_URL = "https://script.google.com/macros/s/AKfycbyDlsW221wLAkj94doftMXsBgHIDgyIGxT_arxOyjy2EJf9HIQUe7KNgH7o9reA-W0q8A/exec";
+    const SHEET_JSON_URL = "https://script.google.com/macros/s/AKfycbyDlsW221wLAkj94doftMXsBgHIDgyIGxT_arxOyjy2EJf9HIQUh7KNgH7o9reA-W0q8A/exec";
     let SKD_DATA = []; // 현재 시트 데이터
     let LAST_CHANGES_FROM_SERVER = []; // 서버가 마지막으로 감지한 변경사항 (전역)
     let lastAcknowledgedUpdateTime = localStorage.getItem('lastAcknowledgedUpdateTime') || ''; // 사용자별 마지막 확인 시점
@@ -319,10 +318,9 @@
         let opsHours = [...new Set(SKD_DATA.map(row => row[columns.indexOf("ops_hour")]).filter(h => h !== undefined && h !== null))].sort((a,b) => a-b);
         opsHourSelect.innerHTML = `<option value="">전체</option>` + 
                                   opsHours.map(h => {
-                                    const nextHour = (h + 1) % 24;
                                     const hourStr = String(h).padStart(2, '0');
-                                    const nextHourStr = String(nextHour).padStart(2, '0');
-                                    return `<option value="${h}">${hourStr}시-${nextHourStr}시</option>`;
+                                    // ★★★ 이 부분이 수정되었습니다. "XX시"로 표시 ★★★
+                                    return `<option value="${h}">${hourStr}시</option>`;
                                   }).join('');
         opsHourSelect.value = "";
 
@@ -418,14 +416,14 @@
         // row는 API에서 가져온 배열 형태의 데이터
         const kalOalIdx = getColumnIndex("KAL/OAL");
         const flightIdIdx = getColumnIndex("편명");
-        const opsHourIdx = getColumnIndex("ops_hour"); // ops_hour는 HTML 테이블 헤더에 직접 없음, 데이터 컬럼 이름으로 접근
+        const opsHourIdx = dataColumnNames.indexOf("ops_hour"); // ops_hour는 직접적인 HTML 테이블 헤더가 아니므로 dataColumnNames에서 직접 가져옴
         const opTypeIdx = getColumnIndex("출도착");
         const statusIdx = getColumnIndex("상태");
         const terminalIdIdx = getColumnIndex("터미널");
         const gateNumberIdx = getColumnIndex("게이트");
         const carouselIdx = getColumnIndex("Carousel");
         const exitNumberIdx = getColumnIndex("Exit");
-        const airlineIdx = getColumnIndex("airline"); // 항공사 필터링을 위해 airline 컬럼 인덱스 필요
+        const airlineIdx = dataColumnNames.indexOf("airline"); // 항공사 필터링을 위해 airline 컬럼 인덱스 필요
 
         if (f.kal_oal && row[kalOalIdx] != f.kal_oal) return false;
         // 항공사 코드 필터링 (flightId 앞 2글자 또는 airline 컬럼 사용)
@@ -437,7 +435,15 @@
         }
         if (f.flightId && (!row[flightIdIdx] || String(row[flightIdIdx]).indexOf(f.flightId) === -1)) return false;
         
-        if (f.opsHourFilter && row[opsHourIdx] != parseInt(f.opsHourFilter)) return false;
+        // ★★★ 이 부분이 수정되었습니다. 필터링 로직 강화 ★★★
+        if (f.opsHourFilter) { // opsHourFilter가 설정된 경우에만 필터링 적용
+            const filterHour = parseInt(f.opsHourFilter);
+            const rowHour = parseInt(row[opsHourIdx]);
+            // row[opsHourIdx]가 숫자로 파싱되지 않거나 (NaN), 필터링 값과 일치하지 않으면 해당 행은 필터링
+            if (isNaN(rowHour) || rowHour !== filterHour) {
+                return false;
+            }
+        }
 
         if (f.op_type && row[opTypeIdx] != f.op_type) return false;
         if (f.status && row[statusIdx] != f.status) return false;
@@ -505,7 +511,7 @@
           <tr>
             <td class="${getCellClass('date', row[dataColumnNames.indexOf("date")]||"")}">${String(row[dataColumnNames.indexOf("date")]).slice(4,6)}/${String(row[dataColumnNames.indexOf("date")]).slice(6,8)}</td>
             <td class="two-line ${getCellClass('kal_oal', row[dataColumnNames.indexOf("kal_oal")]||"")}">${row[dataColumnNames.indexOf("kal_oal")]||""}</td>
-            <td class="two-line ${getCellClass('flightId', row[dataColumnNames.indexOf("flightId")]||"")}">${row[dataColumnNames.indexOf("flightId")] ? row[dataColumnNames.indexOf("flightId")].slice(0,2) + '<br>' + row[dataColumnNames.indexOf("flightId")].slice(2) : ""}</td>
+            <td class="two-line ${getCellClass('flightId', row[dataColumnNames.indexOf("flightId")]||"")}">${row[dataColumnNames.indexOf("flightId")] ? row[dataColumnNames.indexOf("flightId").slice(0,2)] + '<br>' + row[dataColumnNames.indexOf("flightId")].slice(2) : ""}</td>
             <td class="${getCellClass('sector', row[dataColumnNames.indexOf("sector")]||"")}">${row[dataColumnNames.indexOf("sector")]||""}</td>
             <td class="${getCellClass('op_type', row[dataColumnNames.indexOf("op_type")]||"")}">${row[dataColumnNames.indexOf("op_type")]||""}</td>
             <td class="${getCellClass('s_time', row[dataColumnNames.indexOf("s_time")]||"")}">${toHHMMString(row[dataColumnNames.indexOf("s_time")]||"")}</td>
