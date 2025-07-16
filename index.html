@@ -233,6 +233,12 @@
     let LAST_CHANGES_FROM_SERVER = []; // 서버가 마지막으로 감지한 변경사항 (전역)
     let lastAcknowledgedUpdateTime = localStorage.getItem('lastAcknowledgedUpdateTime') || ''; // 사용자별 마지막 확인 시점
 
+    // 데이터 배열의 컬럼명을 정의 (전역 변수로 선언)
+    const dataColumnNames = ["date", "kal_oal", "airline", "flightId", "sector", "op_type", "passengerOrCargo",
+                             "typeOfFlight", "ops_hour", "scheduleDatetime", "estimatedDatetime", "s_time", "e_time",
+                             "difftime", "status", "terminalId", "chkinRange", "gateNumber", "aircraftSubtype", "carousel", "exitNumber", "updated_at"];
+
+
     // --- 시간 변환 함수 (UTC ISO 문자열을 브라우저의 로컬 시간대(KST)로 변환) ---
     function toKSTString(dtstr) {
       if (!dtstr) {
@@ -304,18 +310,22 @@
 
         SKD_DATA = responseData.currentData;
         LAST_CHANGES_FROM_SERVER = responseData.lastChanges || [];
-        const columns = responseData.columns; 
+        // responseData.columns는 API 응답의 실제 컬럼 순서이므로, dataColumnNames와 비교하여 사용합니다.
+        // 여기서는 직접 사용하지 않고, dataColumnNames 인덱스를 기반으로 합니다.
+
 
         // 터미널 옵션 동적생성
         let terminalSelect = document.getElementById("terminalId");
-        let terminals = [...new Set(SKD_DATA.map(row => row[columns.indexOf("terminalId")]).filter(t => t))].sort();
+        let terminals = [...new Set(SKD_DATA.map(row => row[dataColumnNames.indexOf("terminalId")]).filter(t => t))].sort();
         terminalSelect.innerHTML = `<option value="">전체</option>` + 
                                    terminals.map(t => `<option value="${t}">${t}</option>`).join('');
         terminalSelect.value = "";
 
         // 시간대 옵션 동적생성
         let opsHourSelect = document.getElementById("opsHourFilter");
-        let opsHours = [...new Set(SKD_DATA.map(row => row[columns.indexOf("ops_hour")]).filter(h => h !== undefined && h !== null))].sort((a,b) => a-b);
+        // ops_hour 컬럼의 인덱스를 dataColumnNames에서 가져옴 (이제 전역 변수)
+        const opsHourColIdx = dataColumnNames.indexOf("ops_hour");
+        let opsHours = [...new Set(SKD_DATA.map(row => row[opsHourColIdx]).filter(h => h !== undefined && h !== null))].sort((a,b) => a-b);
         opsHourSelect.innerHTML = `<option value="">전체</option>` + 
                                   opsHours.map(h => {
                                     const hourStr = String(h).padStart(2, '0');
@@ -326,21 +336,21 @@
 
         // 게이트 옵션 동적생성
         let gateNumberSelect = document.getElementById("gateNumberFilter");
-        let gateNumbers = [...new Set(SKD_DATA.map(row => row[columns.indexOf("gateNumber")]).filter(g => g))].sort((a,b) => String(a).localeCompare(String(b)));
+        let gateNumbers = [...new Set(SKD_DATA.map(row => row[dataColumnNames.indexOf("gateNumber")]).filter(g => g))].sort((a,b) => String(a).localeCompare(String(b)));
         gateNumberSelect.innerHTML = `<option value="">전체</option>` + 
                                      gateNumbers.map(g => `<option value="${g}">${g}</option>`).join('');
         gateNumberSelect.value = "";
 
         // Carousel 옵션 동적생성
         let carouselSelect = document.getElementById("carouselFilter");
-        let carousels = [...new Set(SKD_DATA.map(row => row[columns.indexOf("carousel")]).filter(c => c))].sort((a,b) => String(a).localeCompare(String(b)));
+        let carousels = [...new Set(SKD_DATA.map(row => row[dataColumnNames.indexOf("carousel")]).filter(c => c))].sort((a,b) => String(a).localeCompare(String(b)));
         carouselSelect.innerHTML = `<option value="">전체</option>` + 
                                    carousels.map(c => `<option value="${c}">${c}</option>`).join('');
         carouselSelect.value = "";
 
         // Exit 옵션 동적생성
         let exitNumberSelect = document.getElementById("exitNumberFilter");
-        let exitNumbers = [...new Set(SKD_DATA.map(row => row[columns.indexOf("exitNumber")]).filter(e => e))].sort((a,b) => String(a).localeCompare(String(b)));
+        let exitNumbers = [...new Set(SKD_DATA.map(row => row[dataColumnNames.indexOf("exitNumber")]).filter(e => e))].sort((a,b) => String(a).localeCompare(String(b)));
         exitNumberSelect.innerHTML = `<option value="">전체</option>` + 
                                      exitNumbers.map(e => `<option value="${e}">${e}</option>`).join('');
         exitNumberSelect.value = "";
@@ -350,7 +360,7 @@
         let latestUpdatedAt = "";
         if (SKD_DATA.length > 0) {
           // updated_at 컬럼 인덱스 찾기
-          const updatedAtColIdx = columns.indexOf("updated_at");
+          const updatedAtColIdx = dataColumnNames.indexOf("updated_at");
           if (updatedAtColIdx !== -1) {
             let sorted = SKD_DATA
               .filter(r => r[updatedAtColIdx])
@@ -386,28 +396,22 @@
       });
 
       // 컬럼 인덱스를 미리 가져옴
-      const headerRow = document.getElementById("skd-table").querySelector("thead tr").children;
-      const columns = Array.from(headerRow).map(th => th.innerText.replace(/\n/g, '').trim());
+      // HTML 테이블 헤더와 실제 데이터 배열의 순서가 다를 수 있으므로 매핑
       const getColumnIndex = (colName) => {
-          // HTML 테이블 헤더와 실제 데이터 배열의 순서가 다를 수 있으므로 매핑
-          const dataCols = ["date", "kal_oal", "airline", "flightId", "sector", "op_type", "passengerOrCargo",
-                            "typeOfFlight", "ops_hour", "scheduleDatetime", "estimatedDatetime", "s_time", "e_time",
-                            "difftime", "status", "terminalId", "chkinRange", "gateNumber", "aircraftSubtype", "carousel", "exitNumber", "updated_at"];
-          
           switch(colName) {
-              case "출발일": return dataCols.indexOf("date");
-              case "KAL/OAL": return dataCols.indexOf("kal_oal");
-              case "편명": return dataCols.indexOf("flightId");
-              case "구간": return dataCols.indexOf("sector");
-              case "출도착": return dataCols.indexOf("op_type");
-              case "예정시간": return dataCols.indexOf("s_time");
-              case "실제시간": return dataCols.indexOf("e_time");
-              case "상태": return dataCols.indexOf("status");
-              case "터미널": return dataCols.indexOf("terminalId");
-              case "게이트": return dataCols.indexOf("gateNumber");
-              case "기종": return dataCols.indexOf("aircraftSubtype");
-              case "Carousel": return dataCols.indexOf("carousel");
-              case "Exit": return dataCols.indexOf("exitNumber");
+              case "출발일": return dataColumnNames.indexOf("date");
+              case "KAL/OAL": return dataColumnNames.indexOf("kal_oal");
+              case "편명": return dataColumnNames.indexOf("flightId");
+              case "구간": return dataColumnNames.indexOf("sector");
+              case "출도착": return dataColumnNames.indexOf("op_type");
+              case "예정시간": return dataColumnNames.indexOf("s_time");
+              case "실제시간": return dataColumnNames.indexOf("e_time");
+              case "상태": return dataColumnNames.indexOf("status");
+              case "터미널": return dataColumnNames.indexOf("terminalId");
+              case "게이트": return dataColumnNames.indexOf("gateNumber");
+              case "기종": return dataColumnNames.indexOf("aircraftSubtype");
+              case "Carousel": return dataColumnNames.indexOf("carousel");
+              case "Exit": return dataColumnNames.indexOf("exitNumber");
               default: return -1;
           }
       };
@@ -416,7 +420,7 @@
         // row는 API에서 가져온 배열 형태의 데이터
         const kalOalIdx = getColumnIndex("KAL/OAL");
         const flightIdIdx = getColumnIndex("편명");
-        const opsHourIdx = dataColumnNames.indexOf("ops_hour"); // ops_hour는 직접적인 HTML 테이블 헤더가 아니므로 dataColumnNames에서 직접 가져옴
+        const opsHourIdx = dataColumnNames.indexOf("ops_hour"); // ops_hour는 전역 dataColumnNames에서 직접 가져옴
         const opTypeIdx = getColumnIndex("출도착");
         const statusIdx = getColumnIndex("상태");
         const terminalIdIdx = getColumnIndex("터미널");
@@ -460,11 +464,6 @@
         tbody.innerHTML = `<tr><td colspan="13">일치하는 데이터가 없습니다.</td></tr>`;
         return;
       }
-
-      // HTML 테이블 컬럼명과 데이터 배열 인덱스 매핑 (실제 데이터 컬럼 순서)
-      const dataColumnNames = ["date", "kal_oal", "airline", "flightId", "sector", "op_type", "passengerOrCargo",
-                               "typeOfFlight", "ops_hour", "scheduleDatetime", "estimatedDatetime", "s_time", "e_time",
-                               "difftime", "status", "terminalId", "chkinRange", "gateNumber", "aircraftSubtype", "carousel", "exitNumber", "updated_at"];
 
       tbody.innerHTML = filtered.map(row => {
         const rowFlightId = row[dataColumnNames.indexOf("flightId")];
